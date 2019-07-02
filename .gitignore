@@ -1,0 +1,6 @@
+# Blacklist some files
+**/*.pyc
+**/*__pycache__
+**/*.swp
+images/
+model/
