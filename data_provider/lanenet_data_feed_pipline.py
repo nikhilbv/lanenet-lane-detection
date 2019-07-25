@@ -47,9 +47,12 @@ class LaneNetDataProducer(object):
         """
         self._dataset_dir = dataset_dir
 
-        self._gt_image_dir = ops.join(dataset_dir, 'gt_image')
-        self._gt_binary_image_dir = ops.join(dataset_dir, 'gt_binary_image')
-        self._gt_instance_image_dir = ops.join(dataset_dir, 'gt_instance_image')
+        # self._gt_image_dir = ops.join(dataset_dir, 'gt_image')
+        self._gt_image_dir = ops.join(dataset_dir, 'image')
+        # self._gt_binary_image_dir = ops.join(dataset_dir, 'gt_binary_image')
+        self._gt_binary_image_dir = ops.join(dataset_dir, 'gt_image_binary')
+        # self._gt_instance_image_dir = ops.join(dataset_dir, 'gt_instance_image')
+        self._gt_instance_image_dir = ops.join(dataset_dir, 'gt_image_instance')
 
         self._train_example_index_file_path = ops.join(self._dataset_dir, 'train.txt')
         self._test_example_index_file_path = ops.join(self._dataset_dir, 'test.txt')

@@ -4,3 +4,6 @@
 **/*.swp
 images/
 model/
+tmp/
+matplotlib/
+tboard/
