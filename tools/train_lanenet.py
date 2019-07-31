@@ -26,6 +26,7 @@ from tools import evaluate_model_utils
 
 CFG = global_config.cfg
 
+log.info("CFG: {}".format(CFG))
 
 def init_args():
     """
@@ -83,10 +84,10 @@ def load_pretrained_weights(variables, pretrained_weights_path, sess):
     :param sess:
     :return:
     """
+    log.info("pretrained_weights_path: {}".format(pretrained_weights_path))
     assert ops.exists(pretrained_weights_path), '{:s} not exist'.format(pretrained_weights_path)
 
-    pretrained_weights = np.load(
-        './data/vgg16.npy', encoding='latin1').item()
+    pretrained_weights = np.load(pretrained_weights_path, encoding='latin1', allow_pickle=True).item()
 
     for vv in variables:
         weights_key = vv.name.split('/')[-3]
@@ -225,7 +226,8 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
         dataset_dir=dataset_dir, flags='val'
     )
 
-    with tf.device('/gpu:1'):
+    # with tf.device('/gpu:1'):
+    with tf.device('/gpu:{:d}'.format(CFG.TRAIN.GPU_NUM)):
         # set lanenet
         train_net = lanenet.LaneNet(net_flag=net_flag, phase='train', reuse=False)
         val_net = lanenet.LaneNet(net_flag=net_flag, phase='val', reuse=True)
@@ -417,6 +419,8 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
 
         if net_flag == 'vgg' and weights_path is None:
             load_pretrained_weights(tf.trainable_variables(), './data/vgg16.npy', sess)
+
+        log.info('load_pretrained_weights SUCCESSFULLY')
 
         train_cost_time_mean = []
         for epoch in range(train_epochs):
@@ -707,6 +711,8 @@ if __name__ == '__main__':
 
     # train lanenet
     if not args.multi_gpus:
+        log.info("train_lanenet-------------------->")
         train_lanenet(args.dataset_dir, args.weights_path, net_flag=args.net_flag)
     else:
+        log.info("train_lanenet_multi_gpu-------------------->")
         train_lanenet_multi_gpu(args.dataset_dir, args.weights_path, net_flag=args.net_flag)

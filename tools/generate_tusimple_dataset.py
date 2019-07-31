@@ -17,6 +17,7 @@ import shutil
 
 import cv2
 import numpy as np
+import glog as log
 
 
 def init_args():
@@ -146,6 +147,9 @@ def process_tusimple_dataset(src_dir):
     os.makedirs(testing_folder_path, exist_ok=True)
 
     for json_label_path in glob.glob('{:s}/label*.json'.format(src_dir)):
+
+        print('json_label_path: {}'.format(json_label_path))
+    
         json_label_name = ops.split(json_label_path)[1]
 
         shutil.copyfile(json_label_path, ops.join(traing_folder_path, json_label_name))

@@ -19,6 +19,7 @@ import tensorflow as tf
 
 from config import global_config
 from data_provider import tf_io_pipline_tools
+import glog as log
 
 CFG = global_config.cfg
 
@@ -46,13 +47,10 @@ class LaneNetDataProducer(object):
         :param dataset_dir:
         """
         self._dataset_dir = dataset_dir
-
-        # self._gt_image_dir = ops.join(dataset_dir, 'gt_image')
-        self._gt_image_dir = ops.join(dataset_dir, 'image')
-        # self._gt_binary_image_dir = ops.join(dataset_dir, 'gt_binary_image')
-        self._gt_binary_image_dir = ops.join(dataset_dir, 'gt_image_binary')
-        # self._gt_instance_image_dir = ops.join(dataset_dir, 'gt_instance_image')
-        self._gt_instance_image_dir = ops.join(dataset_dir, 'gt_image_instance')
+        log.info("dataset_dir: {}".format(dataset_dir))
+        self._gt_image_dir = ops.join(dataset_dir, 'gt_image')
+        self._gt_binary_image_dir = ops.join(dataset_dir, 'gt_binary_image')
+        self._gt_instance_image_dir = ops.join(dataset_dir, 'gt_instance_image')
 
         self._train_example_index_file_path = ops.join(self._dataset_dir, 'train.txt')
         self._test_example_index_file_path = ops.join(self._dataset_dir, 'test.txt')

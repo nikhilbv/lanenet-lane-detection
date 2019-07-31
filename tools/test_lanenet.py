@@ -70,7 +70,7 @@ def test_lanenet(image_path, weights_path):
     """
 
     :param image_path:
-    :param weights_path:
+    :param weights_path:o
     :return:
     """
     assert ops.exists(image_path), '{:s} not exist'.format(image_path)
