@@ -19,8 +19,7 @@ cfg = __C
 __C.TRAIN = edict()
 
 # Set the shadownet training epochs
-# __C.TRAIN.EPOCHS = 80010
-__C.TRAIN.EPOCHS = 10000
+__C.TRAIN.EPOCHS = 80010
 # Set the display step
 __C.TRAIN.DISPLAY_STEP = 1
 # Set the test display step during training process
@@ -52,8 +51,7 @@ __C.TRAIN.CPU_MULTI_PROCESS_NUMS = 6
 # Set the train moving average decay
 __C.TRAIN.MOVING_AVERAGE_DECAY = 0.9999
 # Set the GPU nums
-# __C.TRAIN.GPU_NUM = 2
-__C.TRAIN.GPU_NUM = 1
+__C.TRAIN.GPU_NUM = 2
 
 # Test options
 __C.TEST = edict()
