@@ -8,4 +8,3 @@ tmp/
 tboard/
 data/*.npy
 logs/
-*.local.md
