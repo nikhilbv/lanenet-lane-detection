@@ -16,6 +16,9 @@ python tools/train_lanenet.py --net vgg --dataset_dir ./data/training_data_examp
 python tools/train_lanenet.py --net vgg --dataset_dir ./data/training_data_example -m 0 1>logs/lanenet-$(date -d now +'%d%m%y_%H%M%S').log 2>&1
 python tools/train_lanenet.py --net vgg --dataset_dir /aimldl-dat/data-public/tusimple/train_set/training -m 0 1>logs/lanenet-$(date -d now +'%d%m%y_%H%M%S').log 2>&1
 
+**5. Evaluate - **
+python tools/evaluate_lanenet_on_tusimple.py --image_dir ROOT_DIR/TUSIMPLE_DATASET/test_set/clips --weights_path ./model/tusimple_lanenet_vgg/tusimple_lanenet.ckpt --save_dir ROOT_DIR/TUSIMPLE_DATASET/test_set/test_output
+
 
 ## Debug
 
