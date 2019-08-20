@@ -496,6 +496,9 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
             if epoch % 2000 == 0:
                 saver.save(sess=sess, save_path=model_save_path, global_step=global_step)
 
+            log.info("Total_training_time: {}".format(t_start - time.time()))
+
+
     return
 
 

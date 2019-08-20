@@ -4,7 +4,8 @@
 **/*.swp
 images/
 model/
-tmp/
+predicts/
 tboard/
 data/*.npy
 logs/
+*.local.md

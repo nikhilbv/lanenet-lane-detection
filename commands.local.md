@@ -1,24 +1,23 @@
 **1. Test - **
 python tools/test_lanenet.py --weights_path ./model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt  --image_path ./data/tusimple_test_image/0.jpg
 python tools/test_lanenet.py --weights_path ./model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt  --image_path /aimldl-cod/practice/nikhil/sample-images/*.jpg
+python tools/test_lanenet.py --weights_path ./model/tusimple_lanenet_vgg/tusimple_lanenet_vgg_2019-08-14-14-17-49.ckpt-80001  --image_path /aimldl-cod/practice/nikhil/sample-images/*.jpg
 
-**2. Data Preparation - **
-python data_provider/lanenet_data_feed_pipline.py --dataset_dir ./data/training_data_example --save_dir ./data/training_data_example/tfrecords
-python data_provider/lanenet_data_feed_pipline.py --dataset_dir /aimldl-dat/data-public/tusimple/train_set/training --tfrecords_dir /aimldl-dat/data-public/tusimple/train_set/training/tfrecords
-
-**3. Generate tusimple dataset - **
+**2. Generate tusimple dataset - **
 python tools/generate_tusimple_dataset.py --src_dir path/to/your/unzipped/file
 python tools/generate_tusimple_dataset.py --src_dir /aimldl-dat/data-public/tusimple/train_set
 
+**3. Data Preparation - **
+python data_provider/lanenet_data_feed_pipline.py --dataset_dir ./data/training_data_example --save_dir ./data/training_data_example/tfrecords
+python data_provider/lanenet_data_feed_pipline.py --dataset_dir /aimldl-dat/data-public/tusimple/train_set/training --tfrecords_dir /aimldl-dat/data-public/tusimple/train_set/training/tfrecords
+
 **4. Train - **
-python tools/train_lanenet.py --net vgg --dataset_dir data/training_data_example -m 0
-python tools/train_lanenet.py --net vgg --dataset_dir ./data/training_data_example -m 0 1>1.output.log 2>1.error.log
-python tools/train_lanenet.py --net vgg --dataset_dir ./data/training_data_example -m 0 1>logs/lanenet-$(date -d now +'%d%m%y_%H%M%S').log 2>&1
+python tools/train_lanenet.py --net vgg --dataset_dir ./data/training_data_example -m 0
 python tools/train_lanenet.py --net vgg --dataset_dir /aimldl-dat/data-public/tusimple/train_set/training -m 0 1>logs/lanenet-$(date -d now +'%d%m%y_%H%M%S').log 2>&1
 
 **5. Evaluate - **
 python tools/evaluate_lanenet_on_tusimple.py --image_dir ROOT_DIR/TUSIMPLE_DATASET/test_set/clips --weights_path ./model/tusimple_lanenet_vgg/tusimple_lanenet.ckpt --save_dir ROOT_DIR/TUSIMPLE_DATASET/test_set/test_output
-
+python tools/evaluate_lanenet_on_tusimple.py --image_dir /aimldl-dat/data-public/tusimple-sub/test_set/clips --weights_path /aimldl-cod/external/lanenet-lane-detection/model/tusimple_lanenet_vgg/tusimple_lanenet_vgg_2019-08-14-14-17-49.ckpt-80001 --save_dir /aimldl-cod/external/lanenet-lane-detection/tmp
 
 ## Debug
 
