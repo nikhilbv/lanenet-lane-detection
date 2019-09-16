@@ -16,7 +16,6 @@ import glog as log
 import numpy as np
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
-
 from config import global_config
 
 CFG = global_config.cfg
@@ -260,7 +259,9 @@ class LaneNetPostProcessor(object):
     """
     lanenet post process for lane generation
     """
-    def __init__(self, ipm_remap_file_path='./data/tusimple_ipm_remap.yml'):
+    # def __init__(self, ipm_remap_file_path='./data/tusimple_ipm_remap.yml'):
+    # absolute path is given because there was a path problem in lanenet api
+    def __init__(self, ipm_remap_file_path='/aimldl-cod/external/lanenet-lane-detection/data/tusimple_ipm_remap.yml'):
         """
 
         :param ipm_remap_file_path: ipm generate file path
@@ -314,6 +315,15 @@ class LaneNetPostProcessor(object):
         :param data_source:
         :return:
         """
+
+        pred_json = {
+            # 'image' : source_image,
+            'x_axis' : [],
+            'y_axis' : []
+        }
+        x = 0
+        y = 0
+                
         # convert binary_seg_result
         binary_seg_result = np.array(binary_seg_result * 255, dtype=np.uint8)
 
@@ -348,7 +358,9 @@ class LaneNetPostProcessor(object):
         for lane_index, coords in enumerate(lane_coords):
             if data_source == 'tusimple':
                 tmp_mask = np.zeros(shape=(720, 1280), dtype=np.uint8)
+                # tmp_mask = np.zeros(shape=(1080, 1920), dtype=np.uint8)
                 tmp_mask[tuple((np.int_(coords[:, 1] * 720 / 256), np.int_(coords[:, 0] * 1280 / 512)))] = 255
+                # tmp_mask[tuple((np.int_(coords[:, 1] * 1080 / 256), np.int_(coords[:, 0] * 1920 / 512)))] = 255
             elif data_source == 'beec_ccd':
                 tmp_mask = np.zeros(shape=(1350, 2448), dtype=np.uint8)
                 tmp_mask[tuple((np.int_(coords[:, 1] * 1350 / 256), np.int_(coords[:, 0] * 2448 / 512)))] = 255
@@ -392,7 +404,11 @@ class LaneNetPostProcessor(object):
             single_lane_pt_y = np.array(single_lane_pts, dtype=np.float32)[:, 1]
             if data_source == 'tusimple':
                 start_plot_y = 240
+                # start_plot_y = 360
+                # start_plot_y = 480
+                # start_plot_y = 0
                 end_plot_y = 720
+                # end_plot_y = 1080
             elif data_source == 'beec_ccd':
                 start_plot_y = 820
                 end_plot_y = 1350
@@ -424,17 +440,33 @@ class LaneNetPostProcessor(object):
                 interpolation_src_pt_y = (abs(previous_src_pt_y - plot_y) * previous_src_pt_y +
                                           abs(last_src_pt_y - plot_y) * last_src_pt_y) / \
                                          (abs(previous_src_pt_y - plot_y) + abs(last_src_pt_y - plot_y))
-
+                # log.info("interpolation_src_pt_x:{}".format(interpolation_src_pt_x))
+                # print(type(interpolation_src_pt_x))
+                # log.info("interpolation_src_pt_y:{}".format(interpolation_src_pt_y))
+                # print(type(interpolation_src_pt_y))
+                
                 if interpolation_src_pt_x > source_image_width or interpolation_src_pt_x < 10:
                     continue
 
                 lane_color = self._color_map[index].tolist()
                 cv2.circle(source_image, (int(interpolation_src_pt_x),
                                           int(interpolation_src_pt_y)), 5, lane_color, -1)
+
+                x = int(interpolation_src_pt_x)
+                y = int(interpolation_src_pt_y)
+                # pred_json['x_axis'].append(x.tolist())
+                pred_json['x_axis'].append(x)
+                # pred_json['y_axis'].append(y.tolist())
+                pred_json['y_axis'].append(y)
+
+        # with open('pred.json','w') as outfile:
+        #     json.dump(pred_json, outfile)
+
         ret = {
             'mask_image': mask_image,
             'fit_params': fit_params,
             'source_image': source_image,
+            'pred_json' : pred_json
         }
 
         return ret

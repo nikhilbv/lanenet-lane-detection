@@ -11,6 +11,8 @@ test LaneNet model on single image
 import argparse
 import os.path as ops
 import time
+import datetime
+import json
 
 import cv2
 import glog as log
@@ -75,6 +77,8 @@ def test_lanenet(image_path, weights_path):
     """
     assert ops.exists(image_path), '{:s} not exist'.format(image_path)
 
+    # log.info("image_path : {}".format(image_path))
+
     log.info('Start reading image and preprocessing')
     t_start = time.time()
     image = cv2.imread(image_path, cv2.IMREAD_COLOR)
@@ -131,13 +135,27 @@ def test_lanenet(image_path, weights_path):
         plt.imshow(embedding_image[:, :, (2, 1, 0)])
         plt.figure('binary_image')
         plt.imshow(binary_seg_image[0] * 255, cmap='gray')
-        plt.show()
+        # plt.show()
 
-        cv2.imwrite('instance_mask_image.png', mask_image)
-        cv2.imwrite('source_image.png', postprocess_result['source_image'])
-        cv2.imwrite('binary_mask_image.png', binary_seg_image[0] * 255)
+        ts = time.time()
+        st = datetime.datetime.fromtimestamp(ts).strftime('%d-%m-%Y_%H-%M-%S')
+
+        # cv2.imwrite('instance_mask_image.png', mask_image)
+        # cv2.imwrite('binary_mask_image.png', binary_seg_image[0] * 255)
+        # cv2.imwrite('source_image.png', postprocess_result['source_image'])
+        # cv2.imwrite('source_image-'+st+'.png', postprocess_result['source_image'])
+        
+
+        image_name = image_path.split('/')[-1].split('.')[0]
+        # log.info("image_name : {}".format(image_name))
+        cv2.imwrite('image-'+image_name+'-'+st+'.png', postprocess_result['source_image'])
 
     sess.close()
+
+    pred_json = postprocess_result['pred_json']
+
+    with open('pred-'+image_name+'-'+st+'.json','w') as outfile:
+            json.dump(pred_json, outfile)
 
     return
 

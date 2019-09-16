@@ -9,3 +9,4 @@ tboard/
 data/*.npy
 logs/
 *.local.md
+experiments/
