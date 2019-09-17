@@ -121,24 +121,24 @@ def test_lanenet(image_path, weights_path):
             instance_seg_result=instance_seg_image[0],
             source_image=image_vis
         )
-        mask_image = postprocess_result['mask_image']
+        # mask_image = postprocess_result['mask_image']
 
-        for i in range(CFG.TRAIN.EMBEDDING_FEATS_DIMS):
-            instance_seg_image[0][:, :, i] = minmax_scale(instance_seg_image[0][:, :, i])
-        embedding_image = np.array(instance_seg_image[0], np.uint8)
+        # for i in range(CFG.TRAIN.EMBEDDING_FEATS_DIMS):
+        #     instance_seg_image[0][:, :, i] = minmax_scale(instance_seg_image[0][:, :, i])
+        # embedding_image = np.array(instance_seg_image[0], np.uint8)
 
-        plt.figure('mask_image')
-        plt.imshow(mask_image[:, :, (2, 1, 0)])
-        plt.figure('src_image')
-        plt.imshow(image_vis[:, :, (2, 1, 0)])
-        plt.figure('instance_image')
-        plt.imshow(embedding_image[:, :, (2, 1, 0)])
-        plt.figure('binary_image')
-        plt.imshow(binary_seg_image[0] * 255, cmap='gray')
+        # plt.figure('mask_image')
+        # plt.imshow(mask_image[:, :, (2, 1, 0)])
+        # plt.figure('src_image')
+        # plt.imshow(image_vis[:, :, (2, 1, 0)])
+        # plt.figure('instance_image')
+        # plt.imshow(embedding_image[:, :, (2, 1, 0)])
+        # plt.figure('binary_image')
+        # plt.imshow(binary_seg_image[0] * 255, cmap='gray')
         # plt.show()
 
-        ts = time.time()
-        st = datetime.datetime.fromtimestamp(ts).strftime('%d-%m-%Y_%H-%M-%S')
+        now = datetime.datetime.now()
+        timestamp = "{:%d%m%y_%H%M%S}".format(now)
 
         # cv2.imwrite('instance_mask_image.png', mask_image)
         # cv2.imwrite('binary_mask_image.png', binary_seg_image[0] * 255)
@@ -148,13 +148,13 @@ def test_lanenet(image_path, weights_path):
 
         image_name = image_path.split('/')[-1].split('.')[0]
         # log.info("image_name : {}".format(image_name))
-        cv2.imwrite('image-'+image_name+'-'+st+'.png', postprocess_result['source_image'])
+        cv2.imwrite('image-'+image_name+'-'+timestamp+'.png', postprocess_result['source_image'])
 
     sess.close()
 
     pred_json = postprocess_result['pred_json']
 
-    with open('pred-'+image_name+'-'+st+'.json','w') as outfile:
+    with open('pred-'+image_name+'-'+timestamp+'.json','w') as outfile:
             json.dump(pred_json, outfile)
 
     return
