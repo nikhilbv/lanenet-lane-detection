@@ -10,3 +10,5 @@ data/*.npy
 logs/
 *.local.md
 experiments/
+image-*
+pred-*
