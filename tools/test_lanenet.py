@@ -82,7 +82,8 @@ def test_lanenet(image_path, weights_path):
     log.info('Start reading image and preprocessing')
     t_start = time.time()
     image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-    image_vis = image
+    # image_vis = image
+    image_vis = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_LINEAR)
     image = cv2.resize(image, (512, 256), interpolation=cv2.INTER_LINEAR)
     image = image / 127.5 - 1.0
     log.info('Image load complete, cost time: {:.5f}s'.format(time.time() - t_start))
@@ -147,8 +148,8 @@ def test_lanenet(image_path, weights_path):
         # cv2.imwrite('source_image.png', postprocess_result['source_image'])
         # cv2.imwrite('source_image-'+st+'.png', postprocess_result['source_image'])
         
-        cv2.imwrite('instance_mask_image-'+image_name+'-'+timestamp+'.png', postprocess_result['mask_image'])
-        cv2.imwrite('binary_mask_image-'+image_name+'-'+timestamp+'.png', binary_seg_image[0] * 255)
+        # cv2.imwrite('instance_mask_image-'+image_name+'-'+timestamp+'.png', postprocess_result['mask_image'])
+        # cv2.imwrite('binary_mask_image-'+image_name+'-'+timestamp+'.png', binary_seg_image[0] * 255)
         cv2.imwrite('source_image-'+image_name+'-'+timestamp+'.png', postprocess_result['source_image'])
 
     sess.close()

@@ -451,9 +451,14 @@ class LaneNetPostProcessor(object):
                 lane_color = self._color_map[index].tolist()
                 cv2.circle(source_image, (int(interpolation_src_pt_x),
                                           int(interpolation_src_pt_y)), 5, lane_color, -1)
-
-                x = int(interpolation_src_pt_x)
-                y = int(interpolation_src_pt_y)
+                
+                # x = int(interpolation_src_pt_x)
+                # To rescale it back to 1920*1080
+                # x = int(interpolation_src_pt_x*1.5)
+                # math.ceil also returns integer
+                x = math.ceil(interpolation_src_pt_x*1.5)
+                # y = int(interpolation_src_pt_y*1.5)
+                y = math.ceil(interpolation_src_pt_y*1.5)
                 # pred_json['x_axis'].append(x.tolist())
                 pred_json['x_axis'].append(x)
                 # pred_json['y_axis'].append(y.tolist())
@@ -461,7 +466,6 @@ class LaneNetPostProcessor(object):
 
         # with open('pred.json','w') as outfile:
         #     json.dump(pred_json, outfile)
-
         ret = {
             'mask_image': mask_image,
             'fit_params': fit_params,

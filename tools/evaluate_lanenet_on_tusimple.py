@@ -108,6 +108,10 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
                 continue
 
             cv2.imwrite(output_image_path, postprocess_result['source_image'])
+            pred_json = postprocess_result['pred_json']
+
+            with open('eval-'+timestamp+'.json','w') as outfile:
+                json.dump(pred_json, outfile)
 
     return
 
