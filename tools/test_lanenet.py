@@ -139,16 +139,17 @@ def test_lanenet(image_path, weights_path):
 
         now = datetime.datetime.now()
         timestamp = "{:%d%m%y_%H%M%S}".format(now)
+        image_name = image_path.split('/')[-1].split('.')[0]
+        # log.info("image_name : {}".format(image_name))
 
         # cv2.imwrite('instance_mask_image.png', mask_image)
         # cv2.imwrite('binary_mask_image.png', binary_seg_image[0] * 255)
         # cv2.imwrite('source_image.png', postprocess_result['source_image'])
         # cv2.imwrite('source_image-'+st+'.png', postprocess_result['source_image'])
         
-
-        image_name = image_path.split('/')[-1].split('.')[0]
-        # log.info("image_name : {}".format(image_name))
-        cv2.imwrite('image-'+image_name+'-'+timestamp+'.png', postprocess_result['source_image'])
+        cv2.imwrite('instance_mask_image-'+image_name+'-'+timestamp+'.png', postprocess_result['mask_image'])
+        cv2.imwrite('binary_mask_image-'+image_name+'-'+timestamp+'.png', binary_seg_image[0] * 255)
+        cv2.imwrite('source_image-'+image_name+'-'+timestamp+'.png', postprocess_result['source_image'])
 
     sess.close()
 
