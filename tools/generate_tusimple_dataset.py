@@ -50,6 +50,7 @@ def process_json_file(json_file_path, src_dir, ori_dst_dir, binary_dst_dir, inst
             info_dict = json.loads(line)
 
             image_dir = ops.split(info_dict['raw_file'])[0]
+            # image_dir = ops.path.join('images/',image_dir)
             image_dir_split = image_dir.split('/')[1:]
             image_dir_split.append(ops.split(info_dict['raw_file'])[1])
             image_name = '_'.join(image_dir_split)
@@ -146,7 +147,7 @@ def process_tusimple_dataset(src_dir):
     os.makedirs(traing_folder_path, exist_ok=True)
     os.makedirs(testing_folder_path, exist_ok=True)
 
-    for json_label_path in glob.glob('{:s}/label*.json'.format(src_dir)):
+    for json_label_path in glob.glob('{:s}/images*.json'.format(src_dir)):
 
         print('json_label_path: {}'.format(json_label_path))
     

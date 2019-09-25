@@ -35,7 +35,8 @@ def visualize(image_path,json_file):
     y = data['y_axis']
     if len(x) == len(y):
       for i,ele in enumerate(x):
-        im = cv2.circle(im,(int(x[i]),int(y[i])),3,(0, 255, 0))
+        for i1,ele1 in enumerate(x[i]):
+          im = cv2.circle(im,(int(x[i][i1]),int(y[i][i1])),3,(0, 255, 0))
       cv2.imshow("image",im)
       cv2.waitKey()
     else:

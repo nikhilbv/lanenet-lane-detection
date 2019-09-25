@@ -397,11 +397,20 @@ class LaneNetPostProcessor(object):
 
             src_lane_pts.append(lane_pts)
 
+        tmpLanesX = []        
+        tmpLanesY = []        
+
         # tusimple test data sample point along y axis every 10 pixels
         source_image_width = source_image.shape[1]
         for index, single_lane_pts in enumerate(src_lane_pts):
+            # log.info("index : {}".format(index))
+            # log.info("single_lane_pts : {}".format(single_lane_pts))
+
             single_lane_pt_x = np.array(single_lane_pts, dtype=np.float32)[:, 0]
             single_lane_pt_y = np.array(single_lane_pts, dtype=np.float32)[:, 1]
+            # log.info("single_lane_pt_x : {}".format(single_lane_pt_x))
+            # log.info("single_lane_pt_y : {}".format(single_lane_pt_y))
+            # print(len(single_lane_pt_x))
             if data_source == 'tusimple':
                 start_plot_y = 240
                 # start_plot_y = 360
@@ -414,8 +423,12 @@ class LaneNetPostProcessor(object):
                 end_plot_y = 1350
             else:
                 raise ValueError('Wrong data source now only support tusimple and beec_ccd')
-            step = int(math.floor((end_plot_y - start_plot_y) / 10))
+            step = int(math.floor((end_plot_y - start_plot_y) / 10))                    
+            tmpLaneX = []
+            tmpLaneY = []
+            # iii = 0
             for plot_y in np.linspace(start_plot_y, end_plot_y, step):
+                # log.info("plot_y : {}".format(plot_y))
                 diff = single_lane_pt_y - plot_y
                 fake_diff_bigger_than_zero = diff.copy()
                 fake_diff_smaller_than_zero = diff.copy()
@@ -447,7 +460,10 @@ class LaneNetPostProcessor(object):
                 
                 if interpolation_src_pt_x > source_image_width or interpolation_src_pt_x < 10:
                     continue
-
+                
+                # print("iii ",iii)
+                # iii=iii+1
+                
                 lane_color = self._color_map[index].tolist()
                 cv2.circle(source_image, (int(interpolation_src_pt_x),
                                           int(interpolation_src_pt_y)), 5, lane_color, -1)
@@ -456,21 +472,37 @@ class LaneNetPostProcessor(object):
                 # To rescale it back to 1920*1080
                 # x = int(interpolation_src_pt_x*1.5)
                 # math.ceil also returns integer
+                
+                
                 x = math.ceil(interpolation_src_pt_x*1.5)
+                # l.append(x)
+                # lane.append(x)
                 # y = int(interpolation_src_pt_y*1.5)
                 y = math.ceil(interpolation_src_pt_y*1.5)
                 # pred_json['x_axis'].append(x.tolist())
-                pred_json['x_axis'].append(x)
+                # pred_json['x_axis'].append(lane)
+                
                 # pred_json['y_axis'].append(y.tolist())
-                pred_json['y_axis'].append(y)
-
+                # pred_json['y_axis'].append(y)
+                # lane.append(l)
+                # pred_json['x_axis'].append(lane)
+                tmpLaneX.append(x)
+                tmpLaneY.append(y)
+            # print("x len",len(tmpLaneX))
+            # print("y len",len(tmpLaneY))
+            tmpLanesX.append(tmpLaneX)
+            tmpLanesY.append(tmpLaneY)
+        # print("tmpLanesX ",tmpLanesX)   
+        # print("tmpLanesY ",tmpLanesY)
+        pred_json['x_axis'] = tmpLanesX
+        pred_json['y_axis'] = tmpLanesY
         # with open('pred.json','w') as outfile:
         #     json.dump(pred_json, outfile)
         ret = {
             'mask_image': mask_image,
             'fit_params': fit_params,
             'source_image': source_image,
-            'pred_json' : pred_json
+            'pred_json' : pred_json            
         }
 
         return ret
