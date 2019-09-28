@@ -77,8 +77,13 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
 
         image_list = glob.glob('{:s}/**/*.jpg'.format(src_dir), recursive=True)
         avg_time_cost = []
+        pred_json = []
+
         for index, image_path in tqdm.tqdm(enumerate(image_list), total=len(image_list)):
 
+            if index > 3:
+                break         
+            image_name_for_eval = image_path.split('/')[-2]    
             image = cv2.imread(image_path, cv2.IMREAD_COLOR)
             image_vis = image
             image = cv2.resize(image, (512, 256), interpolation=cv2.INTER_LINEAR)
@@ -94,7 +99,8 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
             postprocess_result = postprocessor.postprocess(
                 binary_seg_result=binary_seg_image[0],
                 instance_seg_result=instance_seg_image[0],
-                source_image=image_vis
+                source_image=image_vis,
+                image_name=image_name_for_eval
             )
 
             if index % 100 == 0:
@@ -110,14 +116,17 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
                 continue
 
             cv2.imwrite(output_image_path, postprocess_result['source_image'])
-            
-            now = datetime.datetime.now()
-            timestamp = "{:%d%m%y_%H%M%S}".format(now)
-            
-            pred_json = postprocess_result['pred_json']
-            
-            with open('eval-'+timestamp+'.json','w') as outfile:
-                json.dump(pred_json, outfile)
+        
+            pred_json.append(postprocess_result['pred_json'])
+
+    now = datetime.datetime.now()
+    timestamp = "{:%d%m%y_%H%M%S}".format(now)
+      
+    with open('evaluate-'+timestamp+'.json','w') as outfile:
+        for items in pred_json:
+            log.info("items : {}".format(items))
+            json.dump(items, outfile)
+            outfile.write('\n')
 
     return
 

@@ -77,13 +77,13 @@ def test_lanenet(image_path, weights_path):
     """
     assert ops.exists(image_path), '{:s} not exist'.format(image_path)
 
-    # log.info("image_path : {}".format(image_path))
+    log.info("image_path : {}".format(image_path))
 
     log.info('Start reading image and preprocessing')
     t_start = time.time()
     image = cv2.imread(image_path, cv2.IMREAD_COLOR)
-    # image_vis = image
-    image_vis = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_LINEAR)
+    image_vis = image
+    # image_vis = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_LINEAR)
     image = cv2.resize(image, (512, 256), interpolation=cv2.INTER_LINEAR)
     image = image / 127.5 - 1.0
     log.info('Image load complete, cost time: {:.5f}s'.format(time.time() - t_start))
@@ -92,6 +92,8 @@ def test_lanenet(image_path, weights_path):
 
     net = lanenet.LaneNet(phase='test', net_flag='vgg')
     binary_seg_ret, instance_seg_ret = net.inference(input_tensor=input_tensor, name='lanenet_model')
+
+    image_name_for_pred = image_path.split('/')[-1]
 
     postprocessor = lanenet_postprocess.LaneNetPostProcessor()
 
@@ -118,9 +120,10 @@ def test_lanenet(image_path, weights_path):
         log.info('Single imgae inference cost time: {:.5f}s'.format(t_cost))
 
         postprocess_result = postprocessor.postprocess(
+            image_name=image_name_for_pred,
             binary_seg_result=binary_seg_image[0],
             instance_seg_result=instance_seg_image[0],
-            source_image=image_vis
+            source_image=image_vis 
         )
         # mask_image = postprocess_result['mask_image']
 
@@ -141,6 +144,7 @@ def test_lanenet(image_path, weights_path):
         now = datetime.datetime.now()
         timestamp = "{:%d%m%y_%H%M%S}".format(now)
         image_name = image_path.split('/')[-1].split('.')[0]
+        image_name_for_pred = image_path.split('/')[-1]
         # log.info("image_name : {}".format(image_name))
 
         # cv2.imwrite('instance_mask_image.png', mask_image)
@@ -155,6 +159,7 @@ def test_lanenet(image_path, weights_path):
     sess.close()
 
     pred_json = postprocess_result['pred_json']
+    # pred_json['image_name'] = image_name_for_pred
 
     with open('pred-'+image_name+'-'+timestamp+'.json','w') as outfile:
             json.dump(pred_json, outfile)
