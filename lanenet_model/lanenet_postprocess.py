@@ -303,8 +303,8 @@ class LaneNetPostProcessor(object):
 
         return ret
 
-    def postprocess(self, binary_seg_result, instance_seg_result=None,
-                    min_area_threshold=100, source_image=None,
+    def postprocess(self,image_name, binary_seg_result, instance_seg_result=None,
+                    min_area_threshold=100, source_image=None, 
                     data_source='tusimple'):
         """
 
@@ -319,7 +319,8 @@ class LaneNetPostProcessor(object):
         pred_json = {
             # 'image' : source_image,
             'x_axis' : [],
-            'y_axis' : []
+            'y_axis' : [],
+            'image_name' : None
         }
         x = 0
         y = 0
@@ -454,15 +455,11 @@ class LaneNetPostProcessor(object):
                                           abs(last_src_pt_y - plot_y) * last_src_pt_y) / \
                                          (abs(previous_src_pt_y - plot_y) + abs(last_src_pt_y - plot_y))
                 # log.info("interpolation_src_pt_x:{}".format(interpolation_src_pt_x))
-                # print(type(interpolation_src_pt_x))
                 # log.info("interpolation_src_pt_y:{}".format(interpolation_src_pt_y))
-                # print(type(interpolation_src_pt_y))
                 
                 if interpolation_src_pt_x > source_image_width or interpolation_src_pt_x < 10:
                     continue
                 
-                # print("iii ",iii)
-                # iii=iii+1
                 
                 lane_color = self._color_map[index].tolist()
                 cv2.circle(source_image, (int(interpolation_src_pt_x),
@@ -474,30 +471,18 @@ class LaneNetPostProcessor(object):
                 # math.ceil also returns integer
                 
                 
-                x = math.ceil(interpolation_src_pt_x*1.5)
-                # l.append(x)
-                # lane.append(x)
-                # y = int(interpolation_src_pt_y*1.5)
-                y = math.ceil(interpolation_src_pt_y*1.5)
-                # pred_json['x_axis'].append(x.tolist())
-                # pred_json['x_axis'].append(lane)
-                
-                # pred_json['y_axis'].append(y.tolist())
-                # pred_json['y_axis'].append(y)
-                # lane.append(l)
-                # pred_json['x_axis'].append(lane)
+                # x = math.ceil(interpolation_src_pt_x*1.5)
+                x = math.ceil(interpolation_src_pt_x)
+                # y = math.ceil(interpolation_src_pt_y*1.5)
+                y = math.ceil(interpolation_src_pt_y)
                 tmpLaneX.append(x)
                 tmpLaneY.append(y)
-            # print("x len",len(tmpLaneX))
-            # print("y len",len(tmpLaneY))
             tmpLanesX.append(tmpLaneX)
             tmpLanesY.append(tmpLaneY)
-        # print("tmpLanesX ",tmpLanesX)   
-        # print("tmpLanesY ",tmpLanesY)
         pred_json['x_axis'] = tmpLanesX
         pred_json['y_axis'] = tmpLanesY
-        # with open('pred.json','w') as outfile:
-        #     json.dump(pred_json, outfile)
+        pred_json['image_name'] = image_name
+
         ret = {
             'mask_image': mask_image,
             'fit_params': fit_params,
