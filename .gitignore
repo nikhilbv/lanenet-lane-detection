@@ -2,13 +2,10 @@
 **/*.pyc
 **/*__pycache__
 **/*.swp
-images/
 model/
-predicts/
-tboard/
+predict/
+tboard
 data/*.npy
-logs/
 *.local.md
-experiments/
-image-*
+source_image-*
 pred-*

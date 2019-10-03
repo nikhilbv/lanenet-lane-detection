@@ -122,21 +122,21 @@ def test_lanenet(image_path, weights_path):
             instance_seg_result=instance_seg_image[0],
             source_image=image_vis
         )
-        # mask_image = postprocess_result['mask_image']
+        mask_image = postprocess_result['mask_image']
 
-        # for i in range(CFG.TRAIN.EMBEDDING_FEATS_DIMS):
-        #     instance_seg_image[0][:, :, i] = minmax_scale(instance_seg_image[0][:, :, i])
-        # embedding_image = np.array(instance_seg_image[0], np.uint8)
+        for i in range(CFG.TRAIN.EMBEDDING_FEATS_DIMS):
+            instance_seg_image[0][:, :, i] = minmax_scale(instance_seg_image[0][:, :, i])
+        embedding_image = np.array(instance_seg_image[0], np.uint8)
 
-        # plt.figure('mask_image')
-        # plt.imshow(mask_image[:, :, (2, 1, 0)])
-        # plt.figure('src_image')
-        # plt.imshow(image_vis[:, :, (2, 1, 0)])
-        # plt.figure('instance_image')
-        # plt.imshow(embedding_image[:, :, (2, 1, 0)])
-        # plt.figure('binary_image')
-        # plt.imshow(binary_seg_image[0] * 255, cmap='gray')
-        # plt.show()
+        plt.figure('mask_image')
+        plt.imshow(mask_image[:, :, (2, 1, 0)])
+        plt.figure('src_image')
+        plt.imshow(image_vis[:, :, (2, 1, 0)])
+        plt.figure('instance_image')
+        plt.imshow(embedding_image[:, :, (2, 1, 0)])
+        plt.figure('binary_image')
+        plt.imshow(binary_seg_image[0] * 255, cmap='gray')
+        plt.show()
 
         now = datetime.datetime.now()
         timestamp = "{:%d%m%y_%H%M%S}".format(now)
