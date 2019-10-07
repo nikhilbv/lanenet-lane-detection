@@ -265,9 +265,12 @@ class LaneNetDataProducer(object):
 
             _example_nums = len(_example_info)
 
-            _train_example_info = _example_info[:int(_example_nums * 0.85)]
-            _val_example_info = _example_info[int(_example_nums * 0.85):int(_example_nums * 0.9)]
-            _test_example_info = _example_info[int(_example_nums * 0.9):]
+            # _train_example_info = _example_info[:int(_example_nums * 0.85)]
+            _train_example_info = _example_info[:int(_example_nums * 0.9)]
+            # _val_example_info = _example_info[int(_example_nums * 0.85):int(_example_nums * 0.9)]
+            # _val_example_info = _example_info[int(_example_nums * 0.85):]
+            _val_example_info = _example_info[int(_example_nums * 0.9):]
+            # _test_example_info = _example_info[int(_example_nums * 0.9):]
 
             return _train_example_info, _test_example_info, _val_example_info
 
@@ -280,8 +283,8 @@ class LaneNetDataProducer(object):
         with open(ops.join(self._dataset_dir, 'train.txt'), 'w') as file:
             file.write(''.join(train_example_info))
 
-        with open(ops.join(self._dataset_dir, 'test.txt'), 'w') as file:
-            file.write(''.join(test_example_info))
+        # with open(ops.join(self._dataset_dir, 'test.txt'), 'w') as file:
+        #     file.write(''.join(test_example_info))
 
         with open(ops.join(self._dataset_dir, 'val.txt'), 'w') as file:
             file.write(''.join(val_example_info))
