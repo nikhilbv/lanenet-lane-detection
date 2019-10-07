@@ -320,7 +320,8 @@ class LaneNetPostProcessor(object):
             # 'image' : source_image,
             'x_axis' : [],
             'y_axis' : [],
-            'image_name' : None
+            'image_name' : None,
+            'run_time' : 100
         }
         x = 0
         y = 0
