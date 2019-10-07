@@ -392,7 +392,9 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
     saver = tf.train.Saver()
 
     # Set tf summary save path
-    tboard_save_path = 'tboard/tusimple_lanenet_{:s}'.format(net_flag)
+    tboard_save_dir = '/aimldl-dat/logs/lanenet/tboard'
+    tboard_save_path = ops.join(tboard_save_dir,time.strftime('%d-%m-%y', time.localtime(time.time())))
+    # tboard_save_path = 'tboard/tusimple_lanenet_{:s}'.format(net_flag)
     os.makedirs(tboard_save_path, exist_ok=True)
 
     # Set sess configuration
