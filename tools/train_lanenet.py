@@ -226,6 +226,10 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
         dataset_dir=dataset_dir, flags='val'
     )
 
+    start_time = time.time()
+    log.info("Training started at : {}".format(start_time))
+
+
     # with tf.device('/gpu:1'):
     with tf.device('/gpu:{:d}'.format(CFG.TRAIN.GPU_NUM)):
         # set lanenet
@@ -379,10 +383,8 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
             )
 
     # Set tf model save path
-    # model_save_dir = '/aimldl-dat/logs/lanenet_{:s}'.format(net_flag)
-    model_save_dir = '/mnt/secondary/lanenet-logs/model/lanenet_{:s}'.format(net_flag)
-    # model_save_dir = '/aimldl-dat/logs/lanenet_model/lanenet_{:s}'.format(net_flag)
     # model_save_dir = 'model/tusimple_lanenet_{:s}'.format(net_flag)
+    model_save_dir = '/aimldl-dat/logs/lanenet/model/lanenet_{:s}'.format(net_flag)
     os.makedirs(model_save_dir, exist_ok=True)
     train_start_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
     model_name = 'tusimple_lanenet_{:s}_{:s}.ckpt'.format(net_flag, str(train_start_time))
@@ -499,7 +501,7 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
             if epoch % 2000 == 0:
                 saver.save(sess=sess, save_path=model_save_path, global_step=global_step)
 
-            log.info("Total_training_time: {}".format(t_start - time.time()))
+        log.info("Total_training_time: {}".format(start_time - time.time()))
 
 
     return
