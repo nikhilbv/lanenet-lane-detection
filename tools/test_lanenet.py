@@ -78,6 +78,8 @@ def test_lanenet(image_path, weights_path):
     assert ops.exists(image_path), '{:s} not exist'.format(image_path)
 
     log.info("image_path : {}".format(image_path))
+    image_name_for_pred = image_path.split('/')[-1]
+    
 
     log.info('Start reading image and preprocessing')
     t_start = time.time()
@@ -92,8 +94,6 @@ def test_lanenet(image_path, weights_path):
 
     net = lanenet.LaneNet(phase='test', net_flag='vgg')
     binary_seg_ret, instance_seg_ret = net.inference(input_tensor=input_tensor, name='lanenet_model')
-
-    image_name_for_pred = image_path.split('/')[-1]
 
     postprocessor = lanenet_postprocess.LaneNetPostProcessor()
 
@@ -144,7 +144,6 @@ def test_lanenet(image_path, weights_path):
         now = datetime.datetime.now()
         timestamp = "{:%d%m%y_%H%M%S}".format(now)
         image_name = image_path.split('/')[-1].split('.')[0]
-        image_name_for_pred = image_path.split('/')[-1]
         # log.info("image_name : {}".format(image_name))
 
         # cv2.imwrite('instance_mask_image.png', mask_image)
