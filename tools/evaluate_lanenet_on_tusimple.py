@@ -75,15 +75,26 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
 
         saver.restore(sess=sess, save_path=weights_path)
 
-        image_list = glob.glob('{:s}/**/*.jpg'.format(src_dir), recursive=True)
+        # image_list = glob.glob('{:s}/**/*.jpg'.format(src_dir), recursive=True)
+        file = ops.join(src_dir,"test.txt")
+        image_list = []
+        f = open(file,"r")
+        for x in f:
+            image_list.append(x.split(' ')[0])
         avg_time_cost = []
         pred_json = []
 
+        now = datetime.datetime.now()
+        timestamp = "{:%d%m%y_%H%M%S}".format(now)
+
         for index, image_path in tqdm.tqdm(enumerate(image_list), total=len(image_list)):
 
-            if index > 3:
-                break         
-            image_name_for_eval = image_path.split('/')[-2]    
+            # if index > 3:
+            #     break
+            log.info("image_path : {}".format(image_path))         
+            # image_name_for_eval = image_path.split('/')[-2]    
+            image_name_for_eval = image_path.split('/')[-1].split('.')[0]    
+            # log.info("image_name_for_eval : {}".format(image_name_for_eval))         
             image = cv2.imread(image_path, cv2.IMREAD_COLOR)
             image_vis = image
             image = cv2.resize(image, (512, 256), interpolation=cv2.INTER_LINEAR)
@@ -107,24 +118,23 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
                 log.info('Mean inference time every single image: {:.5f}s'.format(np.mean(avg_time_cost)))
                 avg_time_cost.clear()
 
-            input_image_dir = ops.split(image_path.split('clips')[1])[0][1:]
-            input_image_name = ops.split(image_path)[1]
-            output_image_dir = ops.join(save_dir, input_image_dir)
+            # input_image_dir = ops.split(image_path.split('clips')[1])[0][1:]
+            # input_image_name = ops.split(image_path)[1]
+            
+            
+            output_image_dir = ops.join(save_dir, "eval-"+timestamp)
             os.makedirs(output_image_dir, exist_ok=True)
-            output_image_path = ops.join(output_image_dir, input_image_name)
-            if ops.exists(output_image_path):
-                continue
-
-            cv2.imwrite(output_image_path, postprocess_result['source_image'])
+            output_image_path = ops.join(output_image_dir, "images")
+            os.makedirs(output_image_path, exist_ok=True)
+            output_image_name = ops.join(output_image_path, 'source_image-'+image_name_for_eval+'.png')
+            cv2.imwrite(output_image_name, postprocess_result['source_image'])
         
             pred_json.append(postprocess_result['pred_json'])
 
-    now = datetime.datetime.now()
-    timestamp = "{:%d%m%y_%H%M%S}".format(now)
-      
-    with open('evaluate-'+timestamp+'.json','w') as outfile:
+    json_file_path = ops.join(output_image_dir, 'eval-'+timestamp)
+    with open(json_file_path+".json",'w') as outfile:
         for items in pred_json:
-            log.info("items : {}".format(items))
+            # log.info("items : {}".format(items))
             json.dump(items, outfile)
             outfile.write('\n')
 
