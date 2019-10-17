@@ -181,31 +181,31 @@ class LaneNetDataProducer(object):
         log.info('Generating validation example tfrecords complete')
 
         # generate test example tfrecords
-        log.info('Start generating testing example tfrecords')
+        # log.info('Start generating testing example tfrecords')
 
         # collecting test images paths info
-        test_image_paths_info = _read_training_example_index_file(self._test_example_index_file_path)
-        test_gt_images_paths = test_image_paths_info['gt_path_info']
-        test_gt_binary_images_paths = test_image_paths_info['gt_binary_path_info']
-        test_gt_instance_images_paths = test_image_paths_info['gt_instance_path_info']
+        # test_image_paths_info = _read_training_example_index_file(self._test_example_index_file_path)
+        # test_gt_images_paths = test_image_paths_info['gt_path_info']
+        # test_gt_binary_images_paths = test_image_paths_info['gt_binary_path_info']
+        # test_gt_instance_images_paths = test_image_paths_info['gt_instance_path_info']
 
         # split validating images according step size
-        test_split_result = _split_writing_tfrecords_task(
-            test_gt_images_paths, test_gt_binary_images_paths, test_gt_instance_images_paths, _flags='test')
-        test_example_gt_paths = test_split_result['gt_paths']
-        test_example_gt_binary_paths = test_split_result['gt_binary_paths']
-        test_example_gt_instance_paths = test_split_result['gt_instance_paths']
-        test_example_tfrecords_paths = test_split_result['tfrecords_paths']
+        # test_split_result = _split_writing_tfrecords_task(
+        #     test_gt_images_paths, test_gt_binary_images_paths, test_gt_instance_images_paths, _flags='test')
+        # test_example_gt_paths = test_split_result['gt_paths']
+        # test_example_gt_binary_paths = test_split_result['gt_binary_paths']
+        # test_example_gt_instance_paths = test_split_result['gt_instance_paths']
+        # test_example_tfrecords_paths = test_split_result['tfrecords_paths']
 
-        for index, example_gt_paths in enumerate(test_example_gt_paths):
-            tf_io_pipline_tools.write_example_tfrecords(
-                example_gt_paths,
-                test_example_gt_binary_paths[index],
-                test_example_gt_instance_paths[index],
-                test_example_tfrecords_paths[index]
-            )
+        # for index, example_gt_paths in enumerate(test_example_gt_paths):
+        #     tf_io_pipline_tools.write_example_tfrecords(
+        #         example_gt_paths,
+        #         test_example_gt_binary_paths[index],
+        #         test_example_gt_instance_paths[index],
+        #         test_example_tfrecords_paths[index]
+        #     )
 
-        log.info('Generating testing example tfrecords complete')
+        # log.info('Generating testing example tfrecords complete')
 
         return
 
@@ -265,19 +265,19 @@ class LaneNetDataProducer(object):
 
             _example_nums = len(_example_info)
 
-            # _train_example_info = _example_info[:int(_example_nums * 0.85)]
-            _train_example_info = _example_info[:int(_example_nums * 0.9)]
+            _train_example_info = _example_info[:int(_example_nums * 0.85)]
             # _val_example_info = _example_info[int(_example_nums * 0.85):int(_example_nums * 0.9)]
-            # _val_example_info = _example_info[int(_example_nums * 0.85):]
-            _val_example_info = _example_info[int(_example_nums * 0.9):]
-            # _test_example_info = _example_info[int(_example_nums * 0.9):]
+            _val_example_info = _example_info[int(_example_nums * 0.85):]
+            # _test_example_info = _example_info[:]
 
-            return _train_example_info, _test_example_info, _val_example_info
+            # return _train_example_info, _test_example_info, _val_example_info
+            return _train_example_info, _val_example_info
 
-        train_example_info, test_example_info, val_example_info = _split_training_examples(_gather_example_info())
+        # train_example_info, test_example_info, val_example_info = _split_training_examples(_gather_example_info())
+        train_example_info, val_example_info = _split_training_examples(_gather_example_info())
 
         random.shuffle(train_example_info)
-        random.shuffle(test_example_info)
+        # random.shuffle(test_example_info)
         random.shuffle(val_example_info)
 
         with open(ops.join(self._dataset_dir, 'train.txt'), 'w') as file:
