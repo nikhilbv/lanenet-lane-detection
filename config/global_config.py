@@ -19,8 +19,8 @@ cfg = __C
 __C.TRAIN = edict()
 
 # Set the shadownet training epochs
-# __C.TRAIN.EPOCHS = 10000
-__C.TRAIN.EPOCHS = 80010
+__C.TRAIN.EPOCHS = 10000
+# __C.TRAIN.EPOCHS = 80010
 # Set the display step
 __C.TRAIN.DISPLAY_STEP = 1
 # Set the test display step during training process
@@ -69,8 +69,10 @@ __C.TEST.BATCH_SIZE = 2
 __C.POSTPROCESS = edict()
 
 # Set the post process connect components analysis min area threshold
-__C.POSTPROCESS.MIN_AREA_THRESHOLD = 100
+# __C.POSTPROCESS.MIN_AREA_THRESHOLD = 100
+__C.POSTPROCESS.MIN_AREA_THRESHOLD = 300
 # Set the post process dbscan search radius threshold
-__C.POSTPROCESS.DBSCAN_EPS = 0.35
+# __C.POSTPROCESS.DBSCAN_EPS = 0.35
+__C.POSTPROCESS.DBSCAN_EPS = 0.50
 # Set the post process dbscan min samples threshold
 __C.POSTPROCESS.DBSCAN_MIN_SAMPLES = 1000
