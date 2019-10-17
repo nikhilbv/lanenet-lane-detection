@@ -18,6 +18,8 @@ from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 from config import global_config
 
+log.setLevel("DEBUG")
+
 CFG = global_config.cfg
 
 
@@ -303,11 +305,12 @@ class LaneNetPostProcessor(object):
 
         return ret
 
-    def postprocess(self,image_name, binary_seg_result, instance_seg_result=None,
+    def postprocess(self, image_name, binary_seg_result, instance_seg_result=None,
                     min_area_threshold=100, source_image=None, 
                     data_source='tusimple'):
         """
 
+        :param image_name:
         :param binary_seg_result:
         :param instance_seg_result:
         :param min_area_threshold:
@@ -315,14 +318,18 @@ class LaneNetPostProcessor(object):
         :param data_source:
         :return:
         """
-
-        pred_json = {
-            # 'image' : source_image,
-            'x_axis' : [],
-            'y_axis' : [],
-            'image_name' : None,
-            'run_time' : 100
+        ret = {
+            'mask_image': None,
+            'fit_params': None,
+            'source_image': source_image,
+            'pred_json' : {
+                    'x_axis' : [],
+                    'y_axis' : [],
+                    'image_name' : image_name,
+                    'run_time' : -1
+                }            
         }
+
         x = 0
         y = 0
                 
@@ -332,9 +339,11 @@ class LaneNetPostProcessor(object):
         # apply image morphology operation to fill in the hold and reduce the small area
         morphological_ret = _morphological_process(binary_seg_result, kernel_size=5)
 
+
         connect_components_analysis_ret = _connect_components_analysis(image=morphological_ret)
 
         labels = connect_components_analysis_ret[1]
+
         stats = connect_components_analysis_ret[2]
         for index, stat in enumerate(stats):
             if stat[4] <= min_area_threshold:
@@ -348,147 +357,136 @@ class LaneNetPostProcessor(object):
         )
 
         if mask_image is None:
-            return {
-                'mask_image': None,
-                'fit_params': None,
-                'source_image': None,
+            ret['mask_image'] = None
+            ret['fit_params'] = None
+        else:
+            # lane line fit
+            fit_params = []
+            src_lane_pts = []  
+            # lane pts every single lane
+            for lane_index, coords in enumerate(lane_coords):
+                if data_source == 'tusimple':
+                    tmp_mask = np.zeros(shape=(720, 1280), dtype=np.uint8)
+                    # tmp_mask = np.zeros(shape=(1080, 1920), dtype=np.uint8)
+                    tmp_mask[tuple((np.int_(coords[:, 1] * 720 / 256), np.int_(coords[:, 0] * 1280 / 512)))] = 255
+                    # tmp_mask[tuple((np.int_(coords[:, 1] * 1080 / 256), np.int_(coords[:, 0] * 1920 / 512)))] = 255
+                elif data_source == 'beec_ccd':
+                    tmp_mask = np.zeros(shape=(1350, 2448), dtype=np.uint8)
+                    tmp_mask[tuple((np.int_(coords[:, 1] * 1350 / 256), np.int_(coords[:, 0] * 2448 / 512)))] = 255
+                else:
+                    raise ValueError('Wrong data source now only support tusimple and beec_ccd')
+                tmp_ipm_mask = cv2.remap(
+                    tmp_mask,
+                    self._remap_to_ipm_x,
+                    self._remap_to_ipm_y,
+                    interpolation=cv2.INTER_NEAREST
+                )
+                nonzero_y = np.array(tmp_ipm_mask.nonzero()[0])
+                nonzero_x = np.array(tmp_ipm_mask.nonzero()[1])
+
+                fit_param = np.polyfit(nonzero_y, nonzero_x, 2)
+                fit_params.append(fit_param)
+
+                [ipm_image_height, ipm_image_width] = tmp_ipm_mask.shape
+                plot_y = np.linspace(10, ipm_image_height, ipm_image_height - 10)
+                fit_x = fit_param[0] * plot_y ** 2 + fit_param[1] * plot_y + fit_param[2]
+                # fit_x = fit_param[0] * plot_y ** 3 + fit_param[1] * plot_y ** 2 + fit_param[2] * plot_y + fit_param[3]
+
+                lane_pts = []
+                for index in range(0, plot_y.shape[0], 5):
+                    src_x = self._remap_to_ipm_x[
+                        int(plot_y[index]), int(np.clip(fit_x[index], 0, ipm_image_width - 1))]
+                    if src_x <= 0:
+                        continue
+                    src_y = self._remap_to_ipm_y[
+                        int(plot_y[index]), int(np.clip(fit_x[index], 0, ipm_image_width - 1))]
+                    src_y = src_y if src_y > 0 else 0
+
+                    lane_pts.append([src_x, src_y])
+
+                src_lane_pts.append(lane_pts)
+
+            tmpLanesX = []        
+            tmpLanesY = []        
+
+            # tusimple test data sample point along y axis every 10 pixels
+            source_image_width = source_image.shape[1]
+            for index, single_lane_pts in enumerate(src_lane_pts):
+
+                single_lane_pt_x = np.array(single_lane_pts, dtype=np.float32)[:, 0]
+                single_lane_pt_y = np.array(single_lane_pts, dtype=np.float32)[:, 1]
+                if data_source == 'tusimple':
+                    start_plot_y = 240
+                    end_plot_y = 720
+                elif data_source == 'beec_ccd':
+                    start_plot_y = 820
+                    end_plot_y = 1350
+                else:
+                    raise ValueError('Wrong data source now only support tusimple and beec_ccd')
+                step = int(math.floor((end_plot_y - start_plot_y) / 10))                    
+                tmpLaneX = []
+                tmpLaneY = []
+                # iii = 0
+                for plot_y in np.linspace(start_plot_y, end_plot_y, step):
+                    # log.info("plot_y : {}".format(plot_y))
+                    diff = single_lane_pt_y - plot_y
+                    fake_diff_bigger_than_zero = diff.copy()
+                    fake_diff_smaller_than_zero = diff.copy()
+                    fake_diff_bigger_than_zero[np.where(diff <= 0)] = float('inf')
+                    fake_diff_smaller_than_zero[np.where(diff > 0)] = float('-inf')
+                    idx_low = np.argmax(fake_diff_smaller_than_zero)
+                    idx_high = np.argmin(fake_diff_bigger_than_zero)
+
+                    previous_src_pt_x = single_lane_pt_x[idx_low]
+                    previous_src_pt_y = single_lane_pt_y[idx_low]
+                    last_src_pt_x = single_lane_pt_x[idx_high]
+                    last_src_pt_y = single_lane_pt_y[idx_high]
+
+                    if previous_src_pt_y < start_plot_y or last_src_pt_y < start_plot_y or \
+                            fake_diff_smaller_than_zero[idx_low] == float('-inf') or \
+                            fake_diff_bigger_than_zero[idx_high] == float('inf'):
+                        continue
+
+                    interpolation_src_pt_x = (abs(previous_src_pt_y - plot_y) * previous_src_pt_x +
+                                              abs(last_src_pt_y - plot_y) * last_src_pt_x) / \
+                                             (abs(previous_src_pt_y - plot_y) + abs(last_src_pt_y - plot_y))
+                    interpolation_src_pt_y = (abs(previous_src_pt_y - plot_y) * previous_src_pt_y +
+                                              abs(last_src_pt_y - plot_y) * last_src_pt_y) / \
+                                             (abs(previous_src_pt_y - plot_y) + abs(last_src_pt_y - plot_y))
+                    
+                    if interpolation_src_pt_x > source_image_width or interpolation_src_pt_x < 10:
+                        continue
+                    
+                    
+                    lane_color = self._color_map[index].tolist()
+                    cv2.circle(source_image, (int(interpolation_src_pt_x),
+                                              int(interpolation_src_pt_y)), 5, lane_color, -1)
+                    
+                    
+                    # math.ceil also returns integer insterd of int
+                    # To rescale it back to 1920*1080
+                    # x = math.ceil(interpolation_src_pt_x*1.5)
+                    # y = math.ceil(interpolation_src_pt_y*1.5)
+                    
+                    x = math.ceil(interpolation_src_pt_x)
+                    y = math.ceil(interpolation_src_pt_y)
+
+                    tmpLaneX.append(x)
+                    tmpLaneY.append(y)
+
+                tmpLanesX.append(tmpLaneX)
+                tmpLanesY.append(tmpLaneY)
+
+            ret['mask_image'] = mask_image
+            ret['fit_params'] = fit_params
+            ret['source_image'] = source_image
+            ## overriding the keys, careful
+            ret['pred_json'] = {
+                'x_axis' : tmpLanesX,
+                'y_axis' : tmpLanesY,
+                'image_name' : image_name,
+                'run_time' : 100
             }
 
-        # lane line fit
-        fit_params = []
-        src_lane_pts = []  # lane pts every single lane
-        for lane_index, coords in enumerate(lane_coords):
-            if data_source == 'tusimple':
-                tmp_mask = np.zeros(shape=(720, 1280), dtype=np.uint8)
-                # tmp_mask = np.zeros(shape=(1080, 1920), dtype=np.uint8)
-                tmp_mask[tuple((np.int_(coords[:, 1] * 720 / 256), np.int_(coords[:, 0] * 1280 / 512)))] = 255
-                # tmp_mask[tuple((np.int_(coords[:, 1] * 1080 / 256), np.int_(coords[:, 0] * 1920 / 512)))] = 255
-            elif data_source == 'beec_ccd':
-                tmp_mask = np.zeros(shape=(1350, 2448), dtype=np.uint8)
-                tmp_mask[tuple((np.int_(coords[:, 1] * 1350 / 256), np.int_(coords[:, 0] * 2448 / 512)))] = 255
-            else:
-                raise ValueError('Wrong data source now only support tusimple and beec_ccd')
-            tmp_ipm_mask = cv2.remap(
-                tmp_mask,
-                self._remap_to_ipm_x,
-                self._remap_to_ipm_y,
-                interpolation=cv2.INTER_NEAREST
-            )
-            nonzero_y = np.array(tmp_ipm_mask.nonzero()[0])
-            nonzero_x = np.array(tmp_ipm_mask.nonzero()[1])
-
-            fit_param = np.polyfit(nonzero_y, nonzero_x, 2)
-            fit_params.append(fit_param)
-
-            [ipm_image_height, ipm_image_width] = tmp_ipm_mask.shape
-            plot_y = np.linspace(10, ipm_image_height, ipm_image_height - 10)
-            fit_x = fit_param[0] * plot_y ** 2 + fit_param[1] * plot_y + fit_param[2]
-            # fit_x = fit_param[0] * plot_y ** 3 + fit_param[1] * plot_y ** 2 + fit_param[2] * plot_y + fit_param[3]
-
-            lane_pts = []
-            for index in range(0, plot_y.shape[0], 5):
-                src_x = self._remap_to_ipm_x[
-                    int(plot_y[index]), int(np.clip(fit_x[index], 0, ipm_image_width - 1))]
-                if src_x <= 0:
-                    continue
-                src_y = self._remap_to_ipm_y[
-                    int(plot_y[index]), int(np.clip(fit_x[index], 0, ipm_image_width - 1))]
-                src_y = src_y if src_y > 0 else 0
-
-                lane_pts.append([src_x, src_y])
-
-            src_lane_pts.append(lane_pts)
-
-        tmpLanesX = []        
-        tmpLanesY = []        
-
-        # tusimple test data sample point along y axis every 10 pixels
-        source_image_width = source_image.shape[1]
-        for index, single_lane_pts in enumerate(src_lane_pts):
-            # log.info("index : {}".format(index))
-            # log.info("single_lane_pts : {}".format(single_lane_pts))
-
-            single_lane_pt_x = np.array(single_lane_pts, dtype=np.float32)[:, 0]
-            single_lane_pt_y = np.array(single_lane_pts, dtype=np.float32)[:, 1]
-            # log.info("single_lane_pt_x : {}".format(single_lane_pt_x))
-            # log.info("single_lane_pt_y : {}".format(single_lane_pt_y))
-            # print(len(single_lane_pt_x))
-            if data_source == 'tusimple':
-                start_plot_y = 240
-                # start_plot_y = 360
-                # start_plot_y = 480
-                # start_plot_y = 0
-                end_plot_y = 720
-                # end_plot_y = 1080
-            elif data_source == 'beec_ccd':
-                start_plot_y = 820
-                end_plot_y = 1350
-            else:
-                raise ValueError('Wrong data source now only support tusimple and beec_ccd')
-            step = int(math.floor((end_plot_y - start_plot_y) / 10))                    
-            tmpLaneX = []
-            tmpLaneY = []
-            # iii = 0
-            for plot_y in np.linspace(start_plot_y, end_plot_y, step):
-                # log.info("plot_y : {}".format(plot_y))
-                diff = single_lane_pt_y - plot_y
-                fake_diff_bigger_than_zero = diff.copy()
-                fake_diff_smaller_than_zero = diff.copy()
-                fake_diff_bigger_than_zero[np.where(diff <= 0)] = float('inf')
-                fake_diff_smaller_than_zero[np.where(diff > 0)] = float('-inf')
-                idx_low = np.argmax(fake_diff_smaller_than_zero)
-                idx_high = np.argmin(fake_diff_bigger_than_zero)
-
-                previous_src_pt_x = single_lane_pt_x[idx_low]
-                previous_src_pt_y = single_lane_pt_y[idx_low]
-                last_src_pt_x = single_lane_pt_x[idx_high]
-                last_src_pt_y = single_lane_pt_y[idx_high]
-
-                if previous_src_pt_y < start_plot_y or last_src_pt_y < start_plot_y or \
-                        fake_diff_smaller_than_zero[idx_low] == float('-inf') or \
-                        fake_diff_bigger_than_zero[idx_high] == float('inf'):
-                    continue
-
-                interpolation_src_pt_x = (abs(previous_src_pt_y - plot_y) * previous_src_pt_x +
-                                          abs(last_src_pt_y - plot_y) * last_src_pt_x) / \
-                                         (abs(previous_src_pt_y - plot_y) + abs(last_src_pt_y - plot_y))
-                interpolation_src_pt_y = (abs(previous_src_pt_y - plot_y) * previous_src_pt_y +
-                                          abs(last_src_pt_y - plot_y) * last_src_pt_y) / \
-                                         (abs(previous_src_pt_y - plot_y) + abs(last_src_pt_y - plot_y))
-                # log.info("interpolation_src_pt_x:{}".format(interpolation_src_pt_x))
-                # log.info("interpolation_src_pt_y:{}".format(interpolation_src_pt_y))
-                
-                if interpolation_src_pt_x > source_image_width or interpolation_src_pt_x < 10:
-                    continue
-                
-                
-                lane_color = self._color_map[index].tolist()
-                cv2.circle(source_image, (int(interpolation_src_pt_x),
-                                          int(interpolation_src_pt_y)), 5, lane_color, -1)
-                
-                # x = int(interpolation_src_pt_x)
-                # To rescale it back to 1920*1080
-                # x = int(interpolation_src_pt_x*1.5)
-                # math.ceil also returns integer
-                
-                
-                # x = math.ceil(interpolation_src_pt_x*1.5)
-                x = math.ceil(interpolation_src_pt_x)
-                # y = math.ceil(interpolation_src_pt_y*1.5)
-                y = math.ceil(interpolation_src_pt_y)
-                tmpLaneX.append(x)
-                tmpLaneY.append(y)
-            tmpLanesX.append(tmpLaneX)
-            tmpLanesY.append(tmpLaneY)
-        pred_json['x_axis'] = tmpLanesX
-        pred_json['y_axis'] = tmpLanesY
-        pred_json['image_name'] = image_name
-
-        ret = {
-            'mask_image': mask_image,
-            'fit_params': fit_params,
-            'source_image': source_image,
-            'pred_json' : pred_json            
-        }
-
+        log.debug("ret : {}".format(ret))
         return ret

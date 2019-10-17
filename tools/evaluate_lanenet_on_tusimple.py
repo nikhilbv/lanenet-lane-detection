@@ -61,8 +61,12 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
 
     postprocessor = lanenet_postprocess.LaneNetPostProcessor()
 
-    saver = tf.train.Saver()
+    image_list = glob.glob('{:s}/**/*.jpg'.format(src_dir), recursive=True)
 
+    ## quick testing, comment out later
+    image_list = ['/aimldl-dat/data-gaze/AIML_Database/lnd-011019_165046/test_images/240419_102903_16716_zed_l_074.jpg']
+
+    saver = tf.train.Saver()
     # Set sess configuration
     sess_config = tf.ConfigProto()
     sess_config.gpu_options.per_process_gpu_memory_fraction = CFG.TEST.GPU_MEMORY_FRACTION
@@ -75,12 +79,11 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
 
         saver.restore(sess=sess, save_path=weights_path)
 
-        # image_list = glob.glob('{:s}/**/*.jpg'.format(src_dir), recursive=True)
-        file = ops.join(src_dir,"test.txt")
-        image_list = []
-        f = open(file,"r")
-        for x in f:
-            image_list.append(x.split(' ')[0])
+        # file = ops.join(src_dir,"test.txt")
+        # image_list = []
+        # f = open(file,"r")
+        # for x in f:
+        #     image_list.append(x.split(' ')[0])
         avg_time_cost = []
         pred_json = []
 
@@ -128,8 +131,9 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
             os.makedirs(output_image_path, exist_ok=True)
             output_image_name = ops.join(output_image_path, 'source_image-'+image_name_for_eval+'.png')
             cv2.imwrite(output_image_name, postprocess_result['source_image'])
-        
-            pred_json.append(postprocess_result['pred_json'])
+            
+            if postprocess_result['pred_json']:
+                pred_json.append(postprocess_result['pred_json'])
 
     json_file_path = ops.join(output_image_dir, 'eval-'+timestamp)
     with open(json_file_path+".json",'w') as outfile:

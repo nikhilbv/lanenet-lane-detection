@@ -125,6 +125,7 @@ def test_lanenet(image_path, weights_path):
             instance_seg_result=instance_seg_image[0],
             source_image=image_vis 
         )
+        log.debug("postprocess_result: {}".format(postprocess_result))
         mask_image = postprocess_result['mask_image']
 
         for i in range(CFG.TRAIN.EMBEDDING_FEATS_DIMS):
@@ -151,8 +152,8 @@ def test_lanenet(image_path, weights_path):
         # cv2.imwrite('source_image.png', postprocess_result['source_image'])
         # cv2.imwrite('source_image-'+st+'.png', postprocess_result['source_image'])
         
-        # cv2.imwrite('instance_mask_image-'+image_name+'-'+timestamp+'.png', postprocess_result['mask_image'])
-        # cv2.imwrite('binary_mask_image-'+image_name+'-'+timestamp+'.png', binary_seg_image[0] * 255)
+        cv2.imwrite('instance_mask_image-'+image_name+'-'+timestamp+'.png', postprocess_result['mask_image'])
+        cv2.imwrite('binary_mask_image-'+image_name+'-'+timestamp+'.png', binary_seg_image[0] * 255)
         cv2.imwrite('source_image-'+image_name+'-'+timestamp+'.png', postprocess_result['source_image'])
 
     sess.close()
@@ -161,7 +162,7 @@ def test_lanenet(image_path, weights_path):
     # pred_json['image_name'] = image_name_for_pred
 
     with open('pred-'+image_name+'-'+timestamp+'.json','w') as outfile:
-            json.dump(pred_json, outfile)
+        json.dump(pred_json, outfile)
 
     return
 
