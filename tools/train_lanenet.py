@@ -219,16 +219,16 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
     :param weights_path:
     :return:
     """
+
+    start_time = time.time()
+    log.info("Training started at : {}".format(start_time))
+
     train_dataset = lanenet_data_feed_pipline.LaneNetDataFeeder(
         dataset_dir=dataset_dir, flags='train'
     )
     val_dataset = lanenet_data_feed_pipline.LaneNetDataFeeder(
         dataset_dir=dataset_dir, flags='val'
     )
-
-    start_time = time.time()
-    log.info("Training started at : {}".format(start_time))
-
 
     # with tf.device('/gpu:1'):
     with tf.device('/gpu:{:d}'.format(CFG.TRAIN.GPU_NUM)):
@@ -503,7 +503,7 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
             if epoch % 2000 == 0:
                 saver.save(sess=sess, save_path=model_save_path, global_step=global_step)
 
-        log.info("Total_training_time: {}".format(start_time - time.time()))
+        log.info("Total_training_time: {}".format(time.time() - start_time))
 
 
     return
