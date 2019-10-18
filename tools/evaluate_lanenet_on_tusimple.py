@@ -25,6 +25,7 @@ import tqdm
 from config import global_config
 from lanenet_model import lanenet
 from lanenet_model import lanenet_postprocess
+from common import getBasePath as getbasepath
 
 CFG = global_config.cfg
 
@@ -35,14 +36,16 @@ def init_args():
     :return:
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image_dir', type=str, help='The source tusimple lane test data dir')
+    parser.add_argument('--json_file', type=str, help='The ground truth json_file')
+    # parser.add_argument('--image_dir', type=str, help='The source tusimple lane test data dir')
     parser.add_argument('--weights_path', type=str, help='The model weights path')
     parser.add_argument('--save_dir', type=str, help='The test output save root dir')
 
     return parser.parse_args()
 
 
-def test_lanenet_batch(src_dir, weights_path, save_dir):
+# def test_lanenet_batch(src_dir, weights_path, save_dir):
+def test_lanenet_batch(json_file, weights_path, save_dir):
     """
 
     :param src_dir:
@@ -50,7 +53,8 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
     :param save_dir:
     :return:
     """
-    assert ops.exists(src_dir), '{:s} not exist'.format(src_dir)
+    # assert ops.exists(src_dir), '{:s} not exist'.format(src_dir)
+    assert ops.exists(json_file), '{:s} not exist'.format(src_dir)
 
     os.makedirs(save_dir, exist_ok=True)
 
@@ -61,10 +65,24 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
 
     postprocessor = lanenet_postprocess.LaneNetPostProcessor()
 
-    image_list = glob.glob('{:s}/**/*.jpg'.format(src_dir), recursive=True)
+    # image_list = glob.glob('{:s}/**/*.jpg'.format(src_dir), recursive=True)
 
     ## quick testing, comment out later
-    image_list = ['/aimldl-dat/data-gaze/AIML_Database/lnd-011019_165046/test_images/240419_102903_16716_zed_l_074.jpg']
+    # image_list = ['/aimldl-dat/data-gaze/AIML_Database/lnd-011019_165046/test_images/240419_102903_16716_zed_l_074.jpg']
+    
+    # read images from gt test file
+
+    root = getbasepath(json_file)
+    image_list = []
+    with open(json_file,'r') as file:
+        json_lines = file.readlines()
+        line_index = 0
+        while line_index < len(json_lines):
+            json_line = json_lines[line_index]
+            sample = json.loads(json_line)
+            raw_file = ops.join(root,sample['raw_file'])
+            image_list.append(raw_file)
+            line_index += 1
 
     saver = tf.train.Saver()
     # Set sess configuration
@@ -78,12 +96,6 @@ def test_lanenet_batch(src_dir, weights_path, save_dir):
     with sess.as_default():
 
         saver.restore(sess=sess, save_path=weights_path)
-
-        # file = ops.join(src_dir,"test.txt")
-        # image_list = []
-        # f = open(file,"r")
-        # for x in f:
-        #     image_list.append(x.split(' ')[0])
         avg_time_cost = []
         pred_json = []
 
@@ -153,7 +165,8 @@ if __name__ == '__main__':
     args = init_args()
 
     test_lanenet_batch(
-        src_dir=args.image_dir,
+        json_file=args.json_file,
+        # src_dir=args.image_dir,
         weights_path=args.weights_path,
         save_dir=args.save_dir
     )
