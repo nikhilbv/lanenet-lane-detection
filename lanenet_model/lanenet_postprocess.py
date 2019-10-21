@@ -18,7 +18,7 @@ from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 from config import global_config
 
-log.setLevel("DEBUG")
+# log.setLevel("DEBUG")
 
 CFG = global_config.cfg
 

@@ -106,9 +106,9 @@ def test_lanenet_batch(json_file, weights_path, save_dir):
 
             # if index > 3:
             #     break
-            log.info("image_path : {}".format(image_path))         
+            # log.info("image_path : {}".format(image_path))         
             # image_name_for_eval = image_path.split('/')[-2]    
-            image_name_for_eval = image_path.split('/')[-1].split('.')[0]    
+            image_name = image_path.split('/')[-1]    
             # log.info("image_name_for_eval : {}".format(image_name_for_eval))         
             image = cv2.imread(image_path, cv2.IMREAD_COLOR)
             image_vis = image
@@ -126,28 +126,36 @@ def test_lanenet_batch(json_file, weights_path, save_dir):
                 binary_seg_result=binary_seg_image[0],
                 instance_seg_result=instance_seg_image[0],
                 source_image=image_vis,
-                image_name=image_name_for_eval
+                image_name=image_name
             )
 
             if index % 100 == 0:
                 log.info('Mean inference time every single image: {:.5f}s'.format(np.mean(avg_time_cost)))
                 avg_time_cost.clear()
 
-            # input_image_dir = ops.split(image_path.split('clips')[1])[0][1:]
-            # input_image_name = ops.split(image_path)[1]
-            
-            
-            output_image_dir = ops.join(save_dir, "eval-"+timestamp)
+            output_image_dir = ops.join(save_dir,timestamp)
             os.makedirs(output_image_dir, exist_ok=True)
-            output_image_path = ops.join(output_image_dir, "images")
-            os.makedirs(output_image_path, exist_ok=True)
-            output_image_name = ops.join(output_image_path, 'source_image-'+image_name_for_eval+'.png')
-            cv2.imwrite(output_image_name, postprocess_result['source_image'])
+
+            source_image_path = ops.join(output_image_dir, "source_image")
+            os.makedirs(source_image_path, exist_ok=True)
+            binary_mask_path = ops.join(output_image_dir, "binary_mask")
+            os.makedirs(binary_mask_path, exist_ok=True)
+            instance_mask_path = ops.join(output_image_dir, "instance_mask")
+            os.makedirs(instance_mask_path, exist_ok=True)
+            pred_json_path = ops.join(output_image_dir, "pred_json")
+            os.makedirs(pred_json_path, exist_ok=True)
             
+            source_image_output_path = ops.join(source_image_path,image_name)
+            cv2.imwrite(source_image_output_path, postprocess_result['source_image'])
+            binary_mask_output_path = ops.join(binary_mask_path,image_name)
+            cv2.imwrite(binary_mask_output_path, binary_seg_image[0] * 255)
+            instance_mask_output_path = ops.join(instance_mask_path,image_name)
+            cv2.imwrite(instance_mask_output_path, postprocess_result['mask_image'])
+
             if postprocess_result['pred_json']:
                 pred_json.append(postprocess_result['pred_json'])
 
-    json_file_path = ops.join(output_image_dir, 'eval-'+timestamp)
+    json_file_path = ops.join(pred_json_path, 'pred-'+timestamp)
     with open(json_file_path+".json",'w') as outfile:
         for items in pred_json:
             # log.info("items : {}".format(items))
