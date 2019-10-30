@@ -13,6 +13,7 @@ import math
 import os
 import os.path as ops
 import time
+import datetime
 
 import cv2
 import glog as log
@@ -219,6 +220,8 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
     :param weights_path:
     :return:
     """
+    now = datetime.datetime.now()
+    timestamp = "{:%d%m%y_%H%M%S}".format(now)
 
     start_time = time.time()
     log.info("Training started at : {}".format(start_time))
@@ -384,7 +387,9 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
 
     # Set tf model save path
     # model_save_dir = 'model/tusimple_lanenet_{:s}'.format(net_flag)
-    model_save_dir = '/aimldl-dat/logs/lanenet/model/lanenet_{:s}'.format(net_flag)
+    output_dir = "/aimldl-dat/logs/lanenet/model"
+    model_save_dir = ops.join(output_dir,timestamp)
+    # model_save_dir = '/aimldl-dat/logs/lanenet/model/lanenet_{:s}'.format(net_flag)
     os.makedirs(model_save_dir, exist_ok=True)
     train_start_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
     model_name = 'tusimple_lanenet_{:s}_{:s}.ckpt'.format(net_flag, str(train_start_time))

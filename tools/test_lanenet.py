@@ -88,7 +88,7 @@ def test_lanenet(image_path, weights_path):
     # image_vis = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_LINEAR)
     image = cv2.resize(image, (512, 256), interpolation=cv2.INTER_LINEAR)
     image = image / 127.5 - 1.0
-    log.info('Image load complete, cost time: {:.5f}s'.format(time.time() - t_start))
+    # log.info('Image load complete, cost time: {:.5f}s'.format(time.time() - t_start))
 
     input_tensor = tf.placeholder(dtype=tf.float32, shape=[1, 256, 512, 3], name='input_tensor')
 
@@ -120,7 +120,7 @@ def test_lanenet(image_path, weights_path):
         log.info('Single imgae inference cost time: {:.5f}s'.format(t_cost))
 
         postprocess_result = postprocessor.postprocess(
-            image_name=image_name_for_pred,
+            image_name=image_path,
             binary_seg_result=binary_seg_image[0],
             instance_seg_result=instance_seg_image[0],
             source_image=image_vis 

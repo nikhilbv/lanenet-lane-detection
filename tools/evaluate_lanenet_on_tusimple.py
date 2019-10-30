@@ -37,7 +37,7 @@ def init_args():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--json_file', type=str, help='The ground truth json_file')
-    # parser.add_argument('--image_dir', type=str, help='The source tusimple lane test data dir')
+    # parser.add_argument('--src_dir', type=str, help='The source tusimple lane test data dir')
     parser.add_argument('--weights_path', type=str, help='The model weights path')
     parser.add_argument('--save_dir', type=str, help='The test output save root dir')
 
@@ -54,7 +54,7 @@ def test_lanenet_batch(json_file, weights_path, save_dir):
     :return:
     """
     # assert ops.exists(src_dir), '{:s} not exist'.format(src_dir)
-    assert ops.exists(json_file), '{:s} not exist'.format(src_dir)
+    assert ops.exists(json_file), '{:s} not exist'.format(json_file)
 
     os.makedirs(save_dir, exist_ok=True)
 
@@ -120,18 +120,18 @@ def test_lanenet_batch(json_file, weights_path, save_dir):
                 [binary_seg_ret, instance_seg_ret],
                 feed_dict={input_tensor: [image]}
             )
-            avg_time_cost.append(time.time() - t_start)
+            # avg_time_cost.append(time.time() - t_start)
 
             postprocess_result = postprocessor.postprocess(
                 binary_seg_result=binary_seg_image[0],
                 instance_seg_result=instance_seg_image[0],
                 source_image=image_vis,
-                image_name=image_name
+                image_name=image_path
             )
 
-            if index % 100 == 0:
-                log.info('Mean inference time every single image: {:.5f}s'.format(np.mean(avg_time_cost)))
-                avg_time_cost.clear()
+            # if index % 100 == 0:
+            #     log.info('Mean inference time every single image: {:.5f}s'.format(np.mean(avg_time_cost)))
+            #     avg_time_cost.clear()
 
             output_image_dir = ops.join(save_dir,timestamp)
             os.makedirs(output_image_dir, exist_ok=True)
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
     test_lanenet_batch(
         json_file=args.json_file,
-        # src_dir=args.image_dir,
+        # src_dir=args.src_dir,     
         weights_path=args.weights_path,
         save_dir=args.save_dir
     )
