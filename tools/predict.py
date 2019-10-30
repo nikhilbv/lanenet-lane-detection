@@ -54,6 +54,10 @@ def init_args():
 
   return parser.parse_args()
 
+def isjson(src):
+  file = src.split('/')[-1].split('.')[-1]
+  if file == 'json':
+    return file
 
 def test_lanenet_batch(src, weights_path, save_dir):
   """
@@ -77,14 +81,7 @@ def test_lanenet_batch(src, weights_path, save_dir):
   
   if ops.isdir(src):
     image_list = glob.glob('{:s}/**/*.jpg'.format(src), recursive=True)
-  else:
-    image_list.append(src)
-
-  ## quick testing, comment out later
-  # image_list = ['/aimldl-dat/data-gaze/AIML_Database/lnd-011019_165046/test_images/240419_102903_16716_zed_l_074.jpg']
-    
-  isjson = src.split('/')[-1].split('.')[-1] 
-  if  isjson == 'json':
+  elif isjson(src):
     root = getbasepath(src)
     with open(src,'r') as file:
       json_lines = file.readlines()
@@ -95,7 +92,12 @@ def test_lanenet_batch(src, weights_path, save_dir):
         raw_file = ops.join(root,sample['raw_file'])
         image_list.append(raw_file)
         line_index += 1
+  else:
+    image_list.append(src)
 
+  ## quick testing, comment out later
+  # image_list = ['/aimldl-dat/data-gaze/AIML_Database/lnd-011019_165046/test_images/240419_102903_16716_zed_l_074.jpg']
+    
   now = datetime.datetime.now()
   timestamp = "{:%d%m%y_%H%M%S}".format(now)
 
