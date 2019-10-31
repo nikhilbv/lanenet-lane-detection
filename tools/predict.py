@@ -13,10 +13,12 @@ __version__ = '1.0'
 """
 # Usage
 # --------------------------------------------------------
+# Optional - Use `--pred 1` for predictions without gt and that will be saved in `predict` folder in save_dir
+# --------------------------------------------------------
 # python tools/predict.py --src <path/to/image/directory/json> --weights_path <path/to/weights> --save_dir <path/to/save_predictions>
-# python tools/predict.py --src /aimldl-dat/samples/lanenet/7.jpg --weights_path model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt --save_dir /aimldl-dat/logs/lanenet/predict
-# python tools/predict.py --src /aimldl-dat/samples/lanenet --weights_path model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt --save_dir /aimldl-dat/logs/lanenet/predict
-# python tools/predict.py --src /aimldl-dat/data-gaze/AIML_Database/lnd-211019_120637/images-p1-230919_AT1_via205_081019_tuSimple-211019_120637.json --weights_path model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt --save_dir /aimldl-dat/logs/lanenet/predict
+# python tools/predict.py --src /aimldl-dat/samples/lanenet/7.jpg --weights_path model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt --save_dir /aimldl-dat/logs/lanenet
+# python tools/predict.py --src /aimldl-dat/samples/lanenet --weights_path model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt --save_dir /aimldl-dat/logs/lanenet
+# python tools/predict.py --src /aimldl-dat/data-gaze/AIML_Database/lnd-211019_120637/images-p1-230919_AT1_via205_081019_tuSimple-211019_120637.json --weights_path model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt --save_dir /aimldl-dat/logs/lanenet
 # --------------------------------------------------------
 """
 
@@ -51,23 +53,35 @@ def init_args():
   parser.add_argument('--src', help='Image/directory containing images or json')
   parser.add_argument('--weights_path', help='The model weights path')
   parser.add_argument('--save_dir', help='The test output save root dir')
+  parser.add_argument('--pred', help='Include this flag for predictions without gt')
 
   return parser.parse_args()
 
 def isjson(src):
+  """
+  :param src:
+  :return:
+  """
   file = src.split('/')[-1].split('.')[-1]
   if file == 'json':
     return file
 
-def test_lanenet_batch(src, weights_path, save_dir):
+def detect(src, weights_path, save_dir, pred=None):
   """
-  :param src_dir:
+  :param src:
   :param weights_path:
   :param save_dir:
   :return:
   """
   assert ops.exists(src), '{:s} not exist'.format(src)
 
+  if pred:
+    save_dir = ops.join(save_dir,"predict")
+  else:
+    save_dir = ops.join(save_dir,"evaluate")
+
+  log.info("Predictions are saved in : {}".format(save_dir))
+  
   os.makedirs(save_dir, exist_ok=True)
 
   input_tensor = tf.placeholder(dtype=tf.float32, shape=[1, 256, 512, 3], name='input_tensor')
@@ -114,6 +128,7 @@ def test_lanenet_batch(src, weights_path, save_dir):
   os.makedirs(pred_json_path, exist_ok=True)
 
   saver = tf.train.Saver()
+  
   # Set sess configuration
   sess_config = tf.ConfigProto()
   sess_config.gpu_options.per_process_gpu_memory_fraction = CFG.TEST.GPU_MEMORY_FRACTION
@@ -128,7 +143,6 @@ def test_lanenet_batch(src, weights_path, save_dir):
     saver.restore(sess=sess, save_path=weights_path)
     avg_time_cost = []
     pred_json = []
-
 
     for index, image_path in tqdm.tqdm(enumerate(image_list), total=len(image_list)):
 
@@ -162,7 +176,6 @@ def test_lanenet_batch(src, weights_path, save_dir):
       instance_mask_output_path = ops.join(instance_mask_path,image_name)
       cv2.imwrite(instance_mask_output_path, postprocess_result['mask_image'])
 
-
   json_file_path = ops.join(pred_json_path, 'pred-'+timestamp)
   with open(json_file_path+".json",'w') as outfile:
     for items in pred_json:
@@ -171,16 +184,15 @@ def test_lanenet_batch(src, weights_path, save_dir):
 
   return
 
-
 if __name__ == '__main__':
   """
-  test code
+
   """
-  # init args
   args = init_args()
 
-  test_lanenet_batch(
+  detect(
     src=args.src,
     weights_path=args.weights_path,
-    save_dir=args.save_dir
+    save_dir=args.save_dir,
+    pred = args.pred
   )
