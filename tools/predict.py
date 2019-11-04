@@ -13,7 +13,7 @@ __version__ = '1.0'
 """
 # Usage
 # --------------------------------------------------------
-# Optional - Use `--pred 1` for predictions without gt and that will be saved in `predict` folder in save_dir
+# Optional - Use `--pred 1` for prediction without ground truth and that will be saved in `predict` folder in save_dir
 # --------------------------------------------------------
 # python tools/predict.py --src <path/to/image/directory/json> --weights_path <path/to/weights> --save_dir <path/to/save_predictions>
 # python tools/predict.py --src /aimldl-dat/samples/lanenet/7.jpg --weights_path model/tusimple_lanenet_vgg/tusimple_lanenet_vgg.ckpt --save_dir /aimldl-dat/logs/lanenet
@@ -80,7 +80,7 @@ def detect(src, weights_path, save_dir, pred=None):
   else:
     save_dir = ops.join(save_dir,"evaluate")
 
-  log.info("Predictions are saved in : {}".format(save_dir))
+  log.info("Prediction are saved in : {}".format(save_dir))
   
   os.makedirs(save_dir, exist_ok=True)
 
@@ -163,7 +163,7 @@ def detect(src, weights_path, save_dir, pred=None):
         binary_seg_result=binary_seg_image[0],
         instance_seg_result=instance_seg_image[0],
         source_image=image_vis,
-        image_name=image_name
+        image_name=image_path
       )
 
       if postprocess_result['pred_json']:
