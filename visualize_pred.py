@@ -43,5 +43,5 @@ def visualize(image_path,json_file):
       print("false")
 
 if __name__ == '__main__':
-    args = init_args()
-    visualize(args.image_path, args.json_file)
+  args = init_args()
+  visualize(args.image_path, args.json_file)
