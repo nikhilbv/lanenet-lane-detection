@@ -325,8 +325,8 @@ class LaneNetPostProcessor(object):
             'pred_json' : {
                     'x_axis' : [],
                     'y_axis' : [],
-                    'image_name' : image_name,
-                    'run_time' : -1
+                    'image_name' : None,
+                    'run_time' : 0
                 }            
         }
 
@@ -485,7 +485,7 @@ class LaneNetPostProcessor(object):
                 'x_axis' : tmpLanesX,
                 'y_axis' : tmpLanesY,
                 'image_name' : image_name,
-                'run_time' : 100
+                'run_time' : -1
             }
 
         log.debug("ret : {}".format(ret))
