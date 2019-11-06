@@ -25,6 +25,9 @@ from data_provider import lanenet_data_feed_pipline
 from lanenet_model import lanenet
 from tools import evaluate_model_utils
 
+# import wandb
+# wandb.init(sync_tensorboard=True,project='testing')
+
 CFG = global_config.cfg
 
 log.info("CFG: {}".format(CFG))

@@ -3,9 +3,7 @@
 **/*__pycache__
 **/*.swp
 model/
-predict/
 tboard
 data/*.npy
 *.local.md
-source_image-*
-pred-*
+wandb/
