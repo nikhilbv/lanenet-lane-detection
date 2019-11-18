@@ -6,3 +6,4 @@ tensorflow_gpu==1.12.0
 matplotlib==3.0.2
 opencv==4.0.0
 scikit_learn==0.21.1
+Naked==0.1.31

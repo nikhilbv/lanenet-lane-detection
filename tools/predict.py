@@ -94,8 +94,9 @@ def convert_to_tusimple(json_file):
   from Naked.toolshed.shell import execute_js
   prog = '/aimldl-cod/apps/annon/lanenet_convertviatotusimple.js'
   cmd = '--pred'
+  opt = '--short'
   # print("{} {} {}".format(prog,cmd,json))
-  success = execute_js("{} {} {}".format(prog,cmd,json_file))
+  success = execute_js("{} {} {} {}".format(prog,cmd,opt,json_file))
 
 def evaluate_batch(pred,gt):
   """
@@ -331,14 +332,13 @@ def detect_batch(src, weights_path,save_dir):
       json.dump(items, outfile)
       outfile.write('\n')
   
-  
-  convert_to_tusimple(json_file_path)
+  if json_file_path:
+    convert_to_tusimple(json_file_path)
 
   if isjson(src):
     pred_file = json_file_path.replace('.json','_tuSimple.json')
-    # log.debug('gt : {}'.format(gt))
     val = evaluate_batch(pred_file,src)
-    
+    log.info("----------------------------->\nEvaluation results:{}".format(val))
     eval_file_name = ops.join(eval_json_path, 'eval.json')
     with open(eval_file_name,'w') as outfile:
       json.dump(val, outfile)

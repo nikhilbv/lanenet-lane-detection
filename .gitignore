@@ -7,3 +7,4 @@ tboard
 data/*.npy
 *.local.md
 wandb/
+tmp/
