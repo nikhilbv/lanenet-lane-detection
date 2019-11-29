@@ -366,8 +366,10 @@ class LaneNetPostProcessor(object):
             # lane pts every single lane
             for lane_index, coords in enumerate(lane_coords):
                 if data_source == 'tusimple':
+                    # tmp_mask = np.zeros(shape=(590, 1640), dtype=np.uint8)
                     tmp_mask = np.zeros(shape=(720, 1280), dtype=np.uint8)
                     # tmp_mask = np.zeros(shape=(1080, 1920), dtype=np.uint8)
+                    # tmp_mask[tuple((np.int_(coords[:, 1] * 590 / 256), np.int_(coords[:, 0] * 1640 / 512)))] = 255
                     tmp_mask[tuple((np.int_(coords[:, 1] * 720 / 256), np.int_(coords[:, 0] * 1280 / 512)))] = 255
                     # tmp_mask[tuple((np.int_(coords[:, 1] * 1080 / 256), np.int_(coords[:, 0] * 1920 / 512)))] = 255
                 elif data_source == 'beec_ccd':
@@ -416,7 +418,8 @@ class LaneNetPostProcessor(object):
                 single_lane_pt_x = np.array(single_lane_pts, dtype=np.float32)[:, 0]
                 single_lane_pt_y = np.array(single_lane_pts, dtype=np.float32)[:, 1]
                 if data_source == 'tusimple':
-                    start_plot_y = 240
+                    # start_plot_y = 240
+                    start_plot_y = 160
                     end_plot_y = 720
                 elif data_source == 'beec_ccd':
                     start_plot_y = 820

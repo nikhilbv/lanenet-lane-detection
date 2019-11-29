@@ -26,7 +26,8 @@ from lanenet_model import lanenet
 from tools import evaluate_model_utils
 
 # import wandb
-# wandb.init(sync_tensorboard=True,project='testing')
+# # wandb.init(sync_tensorboard=True,project='testing')
+# wandb.init(project='13')
 
 CFG = global_config.cfg
 
@@ -251,6 +252,10 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
             input_tensor=train_images, binary_label=train_binary_labels,
             instance_label=train_instance_labels, name='lanenet_model'
         )
+
+        pre_train_c = 0
+        pre_train_binary_loss = 0
+        pre_train_instance_loss = 0
         train_total_loss = train_compute_ret['total_loss']
         train_binary_seg_loss = train_compute_ret['binary_seg_loss']
         train_disc_loss = train_compute_ret['discriminative_loss']
@@ -315,6 +320,10 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
             input_tensor=val_images, binary_label=val_binary_labels,
             instance_label=val_instance_labels, name='lanenet_model'
         )
+        pre_val_c = 0
+        pre_val_binary_loss = 0
+        pre_val_instance_loss = 0
+        
         val_total_loss = val_compute_ret['total_loss']
         val_binary_seg_loss = val_compute_ret['binary_seg_loss']
         val_disc_loss = val_compute_ret['discriminative_loss']
@@ -401,7 +410,7 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
 
     # Set tf summary save path
     tboard_save_dir = '/aimldl-dat/logs/lanenet/tboard'
-    tboard_save_path = ops.join(tboard_save_dir,time.strftime('%d-%m-%y', time.localtime(time.time())))
+    tboard_save_path = ops.join(tboard_save_dir,time.strftime('%d-%m-%Y_%H-%M-%S', time.localtime(time.time())))
     # tboard_save_path = 'tboard/tusimple_lanenet_{:s}'.format(net_flag)
     os.makedirs(tboard_save_path, exist_ok=True)
 
@@ -450,12 +459,18 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
                           learning_rate, train_merge_summary_op, train_binary_seg_loss,
                           train_disc_loss, train_pix_embedding, train_prediction,
                           train_images, train_binary_labels, train_instance_labels])
-
             if math.isnan(train_c) or math.isnan(train_binary_loss) or math.isnan(train_instance_loss):
+                train_c = pre_train_c
+                train_binary_loss = pre_train_binary_loss
+                train_instance_loss = pre_train_instance_loss
                 log.error('cost is: {:.5f}'.format(train_c))
                 log.error('binary cost is: {:.5f}'.format(train_binary_loss))
                 log.error('instance cost is: {:.5f}'.format(train_instance_loss))
-                return
+                # return
+
+            pre_train_c = train_c
+            pre_train_binary_loss = train_binary_loss
+            pre_train_instance_loss = train_instance_loss
 
             if epoch % 100 == 0:
                 record_training_intermediate_result(
@@ -484,10 +499,13 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
                           val_images, val_binary_labels, val_instance_labels])
 
             if math.isnan(val_c) or math.isnan(val_binary_loss) or math.isnan(val_instance_loss):
+                val_c = pre_val_c
+                val_binary_loss = pre_val_binary_loss
+                val_instance_loss = pre_val_instance_loss
                 log.error('cost is: {:.5f}'.format(val_c))
                 log.error('binary cost is: {:.5f}'.format(val_binary_loss))
                 log.error('instance cost is: {:.5f}'.format(val_instance_loss))
-                return
+                # return
 
             if epoch % 100 == 0:
                 record_training_intermediate_result(
