@@ -263,8 +263,7 @@ class LaneNetPostProcessor(object):
     """
     # def __init__(self, ipm_remap_file_path='./data/tusimple_ipm_remap.yml'):
     # absolute path is given because there was a path problem in lanenet api
-    # def __init__(self, ipm_remap_file_path='/codehub/external/lanenet-lane-detection/data/tusimple_ipm_remap.yml'):
-    def __init__(self, ipm_remap_file_path='/aimldl-cod/external/lanenet-lane-detection/data/tusimple_ipm_remap.yml'):
+    def __init__(self, ipm_remap_file_path='/codehub/external/lanenet-lane-detection/data/tusimple_ipm_remap.yml'):
         """
 
         :param ipm_remap_file_path: ipm generate file path
