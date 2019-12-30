@@ -31,6 +31,8 @@ from common import getBasePath as getbasepath
 from evaluate import lane
 CFG = global_config.cfg
 
+# log.setLevel("DEBUG")
+
 def parse_args(commands):
   import argparse
   from argparse import RawTextHelpFormatter
@@ -95,7 +97,7 @@ def convert_to_tusimple(json_file):
   prog = '/aimldl-cod/apps/annon/lanenet_convertviatotusimple.js'
   cmd = '--pred'
   opt = '--short'
-  # print("{} {} {}".format(prog,cmd,json))
+  log.debug("{} {} {}".format(prog,cmd,json))
   success = execute_js("{} {} {} {}".format(prog,cmd,opt,json_file))
 
 def evaluate_batch(pred,gt):
@@ -348,7 +350,6 @@ def detect_batch(src, weights_path,save_dir):
 
 def main(args):
   try:
-    log.info("----------------------------->\nargs:{}".format(args))
     cmd = args.command
     src = args.src
     weights_path = args.weights_path
@@ -369,16 +370,16 @@ def main(args):
 
 
 if __name__ == '__main__':
-  log.debug("Executing....")
+  log.info("Executing....")
   t1 = time.time()
 
   commands = ['predict', 'evaluate']
   args = parse_args(commands)
-  log.debug("args: {}".format(args))
+  log.info("args: {}".format(args))
   
   main(args)
 
   t2 = time.time()
   time_taken = (t2 - t1)
   ## TBD: reporting summary for every run
-  log.debug('Total time taken in processing: %f seconds' %(time_taken))
+  log.info('Total time taken in processing: %f seconds' %(time_taken))

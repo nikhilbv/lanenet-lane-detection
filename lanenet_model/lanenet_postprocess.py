@@ -263,7 +263,8 @@ class LaneNetPostProcessor(object):
     """
     # def __init__(self, ipm_remap_file_path='./data/tusimple_ipm_remap.yml'):
     # absolute path is given because there was a path problem in lanenet api
-    def __init__(self, ipm_remap_file_path='/codehub/external/lanenet-lane-detection/data/tusimple_ipm_remap.yml'):
+    # def __init__(self, ipm_remap_file_path='/codehub/external/lanenet-lane-detection/data/tusimple_ipm_remap.yml'):
+    def __init__(self, ipm_remap_file_path='/aimldl-cod/external/lanenet-lane-detection/data/tusimple_ipm_remap.yml'):
         """
 
         :param ipm_remap_file_path: ipm generate file path
@@ -408,8 +409,8 @@ class LaneNetPostProcessor(object):
 
                 src_lane_pts.append(lane_pts)
 
-            tmpLanesX = []        
-            tmpLanesY = []        
+            all_lane_x = []        
+            all_lane_y = []        
 
             # tusimple test data sample point along y axis every 10 pixels
             source_image_width = source_image.shape[1]
@@ -427,8 +428,8 @@ class LaneNetPostProcessor(object):
                 else:
                     raise ValueError('Wrong data source now only support tusimple and beec_ccd')
                 step = int(math.floor((end_plot_y - start_plot_y) / 10))                    
-                tmpLaneX = []
-                tmpLaneY = []
+                single_lane_x = []
+                single_lane_y = []
                 # iii = 0
                 for plot_y in np.linspace(start_plot_y, end_plot_y, step):
                     # log.info("plot_y : {}".format(plot_y))
@@ -474,19 +475,19 @@ class LaneNetPostProcessor(object):
                     x = math.ceil(interpolation_src_pt_x)
                     y = math.ceil(interpolation_src_pt_y)
 
-                    tmpLaneX.append(x)
-                    tmpLaneY.append(y)
+                    single_lane_x.append(x)
+                    single_lane_y.append(y)
 
-                tmpLanesX.append(tmpLaneX)
-                tmpLanesY.append(tmpLaneY)
+                all_lane_x.append(single_lane_x)
+                all_lane_y.append(single_lane_y)
 
             ret['mask_image'] = mask_image
             ret['fit_params'] = fit_params
             ret['source_image'] = source_image
             ## overriding the keys, careful
             ret['pred_json'] = {
-                'x_axis' : tmpLanesX,
-                'y_axis' : tmpLanesY,
+                'x_axis' : all_lane_x,
+                'y_axis' : all_lane_y,
                 'image_name' : image_name,
                 'run_time' : -1
             }
