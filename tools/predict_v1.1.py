@@ -1,5 +1,5 @@
 __author__ = 'nikhilbv'
-__version__ = '1.2'
+__version__ = '1.1'
 
 """
 # Predict or evaluate lanes 
@@ -28,9 +28,8 @@ from config import global_config
 from lanenet_model import lanenet
 from lanenet_model import lanenet_postprocess
 from common import getBasePath as getbasepath
-from common import yaml_load
 from evaluate import lane
-# CFG = global_config.cfg
+CFG = global_config.cfg
 
 # log.setLevel("DEBUG")
 
@@ -48,7 +47,6 @@ def parse_args(commands):
   
   parser.add_argument('--src', help='Image/directory containing images or json')
   parser.add_argument('--weights_path', help='The model weights path')
-  parser.add_argument('--cfg', help='The configuration file path')
 
   args = parser.parse_args()    
 
@@ -68,11 +66,11 @@ def parse_args(commands):
 
 
   if cmd == "evaluate":
-    assert args.cfg,\
-           "Provide --cfg"
+    assert args.src,\
+           "Provide --src"
+    assert args.weights_path,\
+           "Provide --weights_path"
   elif cmd == "predict":
-    assert args.cfg,\
-           "Provide --cfg"
     assert args.src,\
            "Provide --src"
     assert args.weights_path,\
@@ -110,17 +108,13 @@ def evaluate_batch(pred,gt):
   val = lane.LaneEval.bench_one_submit(pred,gt)
   return val
 
-def detect(cfg,src, weights_path,save_dir):
+def detect(src, weights_path,save_dir):
   """
   :param src:
   :param weights_path:
   :param save_dir:
   :return:
   """
-
-  log.info('cfg : {}'.format(cfg))
-
-  # assert ops.exists(cfg), '{:s} not exist'.format(cfg)
   assert ops.exists(src), '{:s} not exist'.format(src)
   assert ops.exists(save_dir), '{:s} not exist'.format(save_dir)
 
@@ -175,8 +169,8 @@ def detect(cfg,src, weights_path,save_dir):
   
   # Set sess configurationtdd_mode
   sess_config = tf.ConfigProto()
-  sess_config.gpu_options.per_process_gpu_memory_fraction = cfg.EVALUATE.GPU_MEMORY_FRACTION
-  sess_config.gpu_options.allow_growth = cfg.TRAIN.TF_ALLOW_GROWTH
+  sess_config.gpu_options.per_process_gpu_memory_fraction = CFG.TEST.GPU_MEMORY_FRACTION
+  sess_config.gpu_options.allow_growth = CFG.TRAIN.TF_ALLOW_GROWTH
   sess_config.gpu_options.allocator_type = 'BFC'
 
   sess = tf.Session(config=sess_config)
@@ -228,7 +222,7 @@ def detect(cfg,src, weights_path,save_dir):
 
   return
 
-def detect_batch(cfg,src,weights_path,save_dir):
+def detect_batch(src, weights_path,save_dir):
   """
   :param args:
   :return:
@@ -289,8 +283,8 @@ def detect_batch(cfg,src,weights_path,save_dir):
   
   # Set sess configurationtdd_mode
   sess_config = tf.ConfigProto()
-  sess_config.gpu_options.per_process_gpu_memory_fraction = cfg.EVALUATE.GPU_MEMORY_FRACTION
-  sess_config.gpu_options.allow_growth = cfg.TRAIN.TF_ALLOW_GROWTH
+  sess_config.gpu_options.per_process_gpu_memory_fraction = CFG.TEST.GPU_MEMORY_FRACTION
+  sess_config.gpu_options.allow_growth = CFG.TRAIN.TF_ALLOW_GROWTH
   sess_config.gpu_options.allocator_type = 'BFC'
 
   sess = tf.Session(config=sess_config)
@@ -357,20 +351,17 @@ def detect_batch(cfg,src,weights_path,save_dir):
 def main(args):
   try:
     cmd = args.command
-    cfg = yaml_load(args.cfg)
+    src = args.src
+    weights_path = args.weights_path
 
-    lanenet_log_dir = cfg.LOGDIR
+    lanenet_log_dir = '/aimldl-dat/logs/lanenet'
 
     if cmd == 'predict':
-      src = args.src
-      weights_path = args.weights_path
       save_dir = ops.join(lanenet_log_dir,cmd)
-      detect(cfg,src,weights_path,save_dir)
+      detect(src,weights_path,save_dir)
     else:
-      weights_path = cfg.EVALUATE.MODEL
-      src = cfg.EVALUATE.DATASET
       save_dir = ops.join(lanenet_log_dir,cmd)
-      detect_batch(cfg,src,weights_path,save_dir)
+      detect_batch(src,weights_path,save_dir)
 
   except Exception as e:
     log.error("Exception occurred", exc_info=True)

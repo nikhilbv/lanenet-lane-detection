@@ -355,10 +355,6 @@ class LaneNetPostProcessor(object):
             binary_seg_result=morphological_ret,
             instance_seg_result=instance_seg_result
         )
-        # cv2.imwrite("mask_image.png",mask_image)
-        
-        source_image_height = source_image.shape[0]
-        source_image_width = source_image.shape[1]
 
         if mask_image is None:
             ret['mask_image'] = None
@@ -366,14 +362,7 @@ class LaneNetPostProcessor(object):
         else:
             # lane line fit
             fit_params = []
-            src_lane_pts = []
-            tmp_ipm_image = cv2.remap(
-                source_image,
-                self._remap_to_ipm_x,
-                self._remap_to_ipm_y,
-                interpolation=cv2.INTER_NEAREST
-            )
- 
+            src_lane_pts = []  
             # lane pts every single lane
             for lane_index, coords in enumerate(lane_coords):
                 if data_source == 'tusimple':
@@ -388,130 +377,62 @@ class LaneNetPostProcessor(object):
                     tmp_mask[tuple((np.int_(coords[:, 1] * 1350 / 256), np.int_(coords[:, 0] * 2448 / 512)))] = 255
                 else:
                     raise ValueError('Wrong data source now only support tusimple and beec_ccd')
-                
-                # cv2.imwrite("tmp_mask.png",tmp_mask)
-                
                 tmp_ipm_mask = cv2.remap(
                     tmp_mask,
                     self._remap_to_ipm_x,
                     self._remap_to_ipm_y,
                     interpolation=cv2.INTER_NEAREST
                 )
-                
-                # cv2.imwrite("tmp_ipm_mask.png",tmp_ipm_mask)
-
-
-
-
                 nonzero_y = np.array(tmp_ipm_mask.nonzero()[0])
                 nonzero_x = np.array(tmp_ipm_mask.nonzero()[1])
 
-                log.debug("nonzero_y : {}".format(nonzero_y))
-                log.debug("max of nonzero_y : {}".format(np.max(nonzero_y)))
-                log.debug("min of nonzero_y : {}".format(np.min(nonzero_y)))
-
-                log.debug("nonzero_x : {}".format(nonzero_x))
-                log.debug("max of nonzero_x : {}".format(np.max(nonzero_x)))
-                log.debug("min of nonzero_x : {}".format(np.min(nonzero_x)))
-
-                for index,val in enumerate(nonzero_x):
-                  lane_color = self._color_map[lane_index].tolist()
-                  cv2.circle(tmp_ipm_image, (nonzero_x[index],nonzero_y[index]), 5, lane_color, -1)
-
-                bbox = []
-                src_x = self._remap_to_ipm_x[np.min(nonzero_y),np.min(nonzero_x)]
-                src_y = self._remap_to_ipm_y[np.min(nonzero_y),np.min(nonzero_x)]
-                bbox.append([src_x, src_y])
-
-                src_x = self._remap_to_ipm_x[np.min(nonzero_y),np.max(nonzero_x)]
-                src_y = self._remap_to_ipm_y[np.min(nonzero_y),np.max(nonzero_x)]
-                bbox.append([src_x, src_y])
-
-                src_x = self._remap_to_ipm_x[np.max(nonzero_y),np.max(nonzero_x)]
-                src_y = self._remap_to_ipm_y[np.max(nonzero_y),np.max(nonzero_x)]
-                bbox.append([src_x, src_y])
-
-                src_x = self._remap_to_ipm_x[np.max(nonzero_y),np.min(nonzero_x)]
-                src_y = self._remap_to_ipm_y[np.max(nonzero_y),np.min(nonzero_x)]
-                bbox.append([src_x, src_y])
-
-                log.debug("bbox : {}".format(bbox))
-
-                min_x = min(bbox[0][0],bbox[3][0])
-                log.debug("min_x : {}".format(min_x))
-
-                max_x = max(bbox[1][0],bbox[2][0])
-                log.debug("max_x : {}".format(max_x))
-
-                fit_param = np.polyfit(nonzero_x, nonzero_y,  2)
+                fit_param = np.polyfit(nonzero_y, nonzero_x, 2)
                 fit_params.append(fit_param)
-                log.debug("fit_params : {}".format(fit_params))
-
 
                 [ipm_image_height, ipm_image_width] = tmp_ipm_mask.shape
-                plot_x = np.linspace(10, ipm_image_width, ipm_image_width - 10)
-                log.debug("plot_x : {}".format(plot_x))
-
-                fit_y = fit_param[0] * plot_x ** 2 + fit_param[1] * plot_x + fit_param[2]
-                # fit_y = fit_param[0] * plot_x ** 3 + fit_param[1] * plot_x ** 2 + fit_param[2] * plot_x + fit_param[3]
-                log.debug("fit_y : {}".format(fit_y))
+                plot_y = np.linspace(10, ipm_image_height, ipm_image_height - 10)
+                fit_x = fit_param[0] * plot_y ** 2 + fit_param[1] * plot_y + fit_param[2]
+                # fit_x = fit_param[0] * plot_y ** 3 + fit_param[1] * plot_y ** 2 + fit_param[2] * plot_y + fit_param[3]
 
                 lane_pts = []
-                for index in range(0, plot_x.shape[0], 5):
+                for index in range(0, plot_y.shape[0], 5):
                     src_x = self._remap_to_ipm_x[
-                         int(np.clip(fit_y[index], 0, ipm_image_height - 1)),int(plot_x[index])]
+                        int(plot_y[index]), int(np.clip(fit_x[index], 0, ipm_image_width - 1))]
                     if src_x <= 0:
                         continue
-                    if src_x < min_x:
-                        continue
-                    if src_x > max_x:
-                        continue
-
                     src_y = self._remap_to_ipm_y[
-                        # int(plot_x[index]), int(np.clip(fit_y[index], 0, ipm_image_height - 1))]
-                        int(np.clip(fit_y[index], 0, ipm_image_height - 1)),int(plot_x[index])]
+                        int(plot_y[index]), int(np.clip(fit_x[index], 0, ipm_image_width - 1))]
                     src_y = src_y if src_y > 0 else 0
 
                     lane_pts.append([src_x, src_y])
-                    log.debug("lane_pts : {}".format(lane_pts))
 
                 src_lane_pts.append(lane_pts)
-                log.debug("src_lane_pts : {}".format(src_lane_pts))
-            
-            # lane_img = np.zeros(shape=(source_image_height,source_image_width*3,3), dtype=np.uint8)
-            # cv2.imwrite("tmp_ipm_image.png",tmp_ipm_image)
-
-            # for index,lane_pt in enumerate(src_lane_pts):
-            #   for i in lane_pt:
-            #     log.debug("i[0] = {}, i[1] = {}".format(int(i[0]),int(i[1])))
-            #     lane_color = self._color_map[index].tolist()
-            #     cv2.circle(lane_img, (int(i[0]),int(i[1])), 15, lane_color, -1)
-            # cv2.imwrite("lane_img.png",lane_img)
-
 
             all_lane_x = []        
             all_lane_y = []        
 
             # tusimple test data sample point along y axis every 10 pixels
+            source_image_width = source_image.shape[1]
             for index, single_lane_pts in enumerate(src_lane_pts):
 
                 single_lane_pt_x = np.array(single_lane_pts, dtype=np.float32)[:, 0]
                 single_lane_pt_y = np.array(single_lane_pts, dtype=np.float32)[:, 1]
                 if data_source == 'tusimple':
-                    # start_plot_x = 240
-                    start_plot_x = 10
-                    end_plot_x = 1280
+                    # start_plot_y = 240
+                    start_plot_y = 160
+                    end_plot_y = 720
                 elif data_source == 'beec_ccd':
-                    start_plot_x = 820
-                    end_plot_x = 1350
+                    start_plot_y = 820
+                    end_plot_y = 1350
                 else:
                     raise ValueError('Wrong data source now only support tusimple and beec_ccd')
-                step = int(math.floor((end_plot_x - start_plot_x) / 10))                    
+                step = int(math.floor((end_plot_y - start_plot_y) / 10))                    
                 single_lane_x = []
                 single_lane_y = []
-                for plot_x in np.linspace(start_plot_x, end_plot_x, step):
-                    log.debug("plot_x : {}".format(plot_x))
-                    diff = single_lane_pt_x - plot_x
+                # iii = 0
+                for plot_y in np.linspace(start_plot_y, end_plot_y, step):
+                    # log.info("plot_y : {}".format(plot_y))
+                    diff = single_lane_pt_y - plot_y
                     fake_diff_bigger_than_zero = diff.copy()
                     fake_diff_smaller_than_zero = diff.copy()
                     fake_diff_bigger_than_zero[np.where(diff <= 0)] = float('inf')
@@ -524,21 +445,19 @@ class LaneNetPostProcessor(object):
                     last_src_pt_x = single_lane_pt_x[idx_high]
                     last_src_pt_y = single_lane_pt_y[idx_high]
 
-                    if previous_src_pt_x < start_plot_x or last_src_pt_x < start_plot_x or \
+                    if previous_src_pt_y < start_plot_y or last_src_pt_y < start_plot_y or \
                             fake_diff_smaller_than_zero[idx_low] == float('-inf') or \
                             fake_diff_bigger_than_zero[idx_high] == float('inf'):
                         continue
 
-                    interpolation_src_pt_x = (abs(previous_src_pt_x - plot_x) * previous_src_pt_x +
-                                              abs(last_src_pt_x - plot_x) * last_src_pt_x) / \
-                                             (abs(previous_src_pt_x - plot_x) + abs(last_src_pt_x - plot_x))
-                    log.debug("i_x : {}, p_x : {}, l_x : {}".format(interpolation_src_pt_x,previous_src_pt_x,last_src_pt_x))
-                    interpolation_src_pt_y = (abs(previous_src_pt_x - plot_x) * previous_src_pt_y +
-                                              abs(last_src_pt_x - plot_x) * last_src_pt_y) / \
-                                             (abs(previous_src_pt_x - plot_x) + abs(last_src_pt_x - plot_x))
-                    log.debug("i_y : {}, p_y : {}, l_y : {}".format(interpolation_src_pt_y,previous_src_pt_y,last_src_pt_y))
+                    interpolation_src_pt_x = (abs(previous_src_pt_y - plot_y) * previous_src_pt_x +
+                                              abs(last_src_pt_y - plot_y) * last_src_pt_x) / \
+                                             (abs(previous_src_pt_y - plot_y) + abs(last_src_pt_y - plot_y))
+                    interpolation_src_pt_y = (abs(previous_src_pt_y - plot_y) * previous_src_pt_y +
+                                              abs(last_src_pt_y - plot_y) * last_src_pt_y) / \
+                                             (abs(previous_src_pt_y - plot_y) + abs(last_src_pt_y - plot_y))
                     
-                    if interpolation_src_pt_y > source_image_height or interpolation_src_pt_y < 10:
+                    if interpolation_src_pt_x > source_image_width or interpolation_src_pt_x < 10:
                         continue
                     
                     

@@ -1,9 +1,10 @@
-numpy==1.15.1
-tqdm==4.28.1
+numpy==1.18.0
+tqdm==4.32.2
 glog==0.3.1
 easydict==1.9
 tensorflow_gpu==1.15.0
-matplotlib==3.0.2
-opencv==4.0.0
+matplotlib==3.1.0
+opencv-python==4.1.0.25
 scikit_learn==0.21.1
 Naked==0.1.31
+ujson==1.35

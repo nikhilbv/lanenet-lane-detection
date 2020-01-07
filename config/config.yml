@@ -1,0 +1,62 @@
+LOGDIR: /aimldl-dat/logs/lanenet
+EVALUATE:
+  # Set the dataset for evaluation
+  DATASET: /aimldl-dat/data-gaze/AIML_Aids/lnd-181219_190809/testing/test-tusimple.json
+  # Set the model for evaluation
+  MODEL: /aimldl-dat/logs/lanenet/model/181219_194839/tusimple_lanenet_vgg_2019-12-18-19-48-45.ckpt-26001
+  # Set the GPU resource used during testing process
+  GPU_MEMORY_FRACTION: 0.8
+  # Set the GPU allow growth parameter during tensorflow testing process
+  TF_ALLOW_GROWTH: True
+  # Set the test batch size
+  BATCH_SIZE: 2
+TRAIN:
+  DATASET: 
+  # Set the pretrained model for training
+  MODEL: 
+  # Set the shadownet training epochs
+  EPOCHS: 10000
+  # Set the display step
+  DISPLAY_STEP: 1
+  # Set the test display step during training process
+  VAL_DISPLAY_STEP: 1000
+  # Set the momentum parameter of the optimizer
+  MOMENTUM: 0.9
+  # Set the initial learning rate
+  LEARNING_RATE: 0.0005
+  # Set the GPU resource used during training process
+  GPU_MEMORY_FRACTION: 0.95
+  # Set the GPU allow growth parameter during tensorflow training process
+  TF_ALLOW_GROWTH: True
+  # Set the shadownet training batch size
+  BATCH_SIZE: 4
+  # Set the shadownet validation batch size
+  VAL_BATCH_SIZE: 4
+  # Set the class numbers
+  CLASSES_NUMS: 2
+  # Set the image height
+  IMG_HEIGHT: 256
+  # Set the image width
+  IMG_WIDTH: 512
+  # Set the embedding features dims
+  EMBEDDING_FEATS_DIMS: 4
+  # Set the random crop pad size
+  CROP_PAD_SIZE: 32
+  # Set cpu multi process thread nums
+  CPU_MULTI_PROCESS_NUMS: 6
+  # Set the train moving average decay
+  MOVING_AVERAGE_DECAY: 0.9999
+  # Set the GPU nums
+  # GPU_NUM: 2
+  GPU_NUM: 1
+POSTPROCESS:
+  # Set the post process connect components analysis min area threshold
+  # MIN_AREA_THRESHOLD: 100
+  MIN_AREA_THRESHOLD: 300
+  # Set the post process dbscan search radius threshold
+  # DBSCAN_EPS: 0.35
+  DBSCAN_EPS: 0.50
+  # Set the post process dbscan min samples threshold
+  DBSCAN_MIN_SAMPLES: 1000
+
+
