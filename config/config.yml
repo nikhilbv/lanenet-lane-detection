@@ -3,7 +3,7 @@ EVALUATE:
   # Set the dataset for evaluation
   DATASET: /aimldl-dat/data-gaze/AIML_Aids/lnd-181219_190809/testing/test-tusimple.json
   # Set the model for evaluation
-  MODEL: /aimldl-dat/logs/lanenet/model/181219_194839/tusimple_lanenet_vgg_2019-12-18-19-48-45.ckpt-26001
+  WEIGHTS: /aimldl-dat/logs/lanenet/model/181219_194839/tusimple_lanenet_vgg_2019-12-18-19-48-45.ckpt-26001
   # Set the GPU resource used during testing process
   GPU_MEMORY_FRACTION: 0.8
   # Set the GPU allow growth parameter during tensorflow testing process
@@ -13,7 +13,7 @@ EVALUATE:
 TRAIN:
   DATASET: 
   # Set the pretrained model for training
-  MODEL: 
+  WEIGHTS: 
   # Set the shadownet training epochs
   EPOCHS: 10000
   # Set the display step

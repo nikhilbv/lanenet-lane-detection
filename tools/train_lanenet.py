@@ -527,4 +527,4 @@ if __name__ == '__main__':
 
     # train lanenet
     log.info("train_lanenet-------------------->")
-    train_lanenet(CFG.TRAIN.DATASET, CFG.TRAIN.MODEL, net_flag=args.net_flag)
+    train_lanenet(CFG.TRAIN.DATASET, CFG.TRAIN.WEIGHTS, net_flag=args.net_flag)

@@ -46,8 +46,8 @@ def parse_args(commands):
     metavar="<command>",
     help="{}".format(', '.join(commands)))
   
-  parser.add_argument('--src', help='Image/directory containing images or json')
-  parser.add_argument('--weights_path', help='The model weights path')
+  parser.add_argument('-s', '--src', help='Image/directory containing images or json')
+  parser.add_argument('-w','--weights_path', help='The model weights path')
   parser.add_argument('--cfg', help='The configuration file path')
 
   args = parser.parse_args()    
@@ -360,7 +360,7 @@ def main(args):
       detect(src,weights_path,save_dir)
     else:
       cfg = yaml_load(args.cfg)
-      weights_path = cfg.EVALUATE.MODEL
+      weights_path = cfg.EVALUATE.WEIGHTS
       src = cfg.EVALUATE.DATASET
       save_dir = ops.join(lanenet_log_dir,cmd)
       detect_batch(cfg,src,weights_path,save_dir)
