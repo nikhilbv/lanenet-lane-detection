@@ -26,7 +26,6 @@ import tqdm
 
 from config import global_config
 from lanenet_model import lanenet
-from lanenet_model import lanenet_postprocess
 from common import getBasePath as getbasepath
 from common import yaml_load
 from evaluate import lane
@@ -47,8 +46,9 @@ def parse_args(commands):
     help="{}".format(', '.join(commands)))
   
   parser.add_argument('-s', '--src', help='Image/directory containing images or json')
-  parser.add_argument('-w','--weights_path', help='The model weights path')
-  parser.add_argument('--cfg', help='The configuration file path')
+  parser.add_argument('-w', '--weights_path', help='The model weights path')
+  parser.add_argument('-c', '--cfg', help='The configuration file path')
+  parser.add_argument('-o', '--orientation', help='The configuration file path')
 
   args = parser.parse_args()    
 
@@ -70,7 +70,11 @@ def parse_args(commands):
   if cmd == "evaluate":
     assert args.cfg,\
            "Provide --cfg"
+    assert args.orientation,\
+           "Provide --orientation"
   elif cmd == "predict":
+    assert args.orientation,\
+           "Provide --orientation"
     assert args.src,\
            "Provide --src"
     assert args.weights_path,\
@@ -108,14 +112,20 @@ def evaluate_batch(pred,gt):
   val = lane.LaneEval.bench_one_submit(pred,gt)
   return val
 
-def detect(src, weights_path,save_dir):
+def detect(src, weights_path,save_dir,orientation):
   """
+
   :param src:
   :param weights_path:
   :param save_dir:
   :return:
   """
-  # assert ops.exists(cfg), '{:s} not exist'.format(cfg)
+
+  if orientation == 'vline':
+    from lanenet_model import lanenet_postprocess_vline as lanenet_postprocess
+  else:
+    from lanenet_model import lanenet_postprocess_hline as lanenet_postprocess
+
   assert ops.exists(src), '{:s} not exist'.format(src)
 
   log.info("Prediction are saved in : {}".format(save_dir))
@@ -222,13 +232,19 @@ def detect(src, weights_path,save_dir):
 
   return
 
-def detect_batch(cfg,src,weights_path,save_dir):
+def detect_batch(cfg,src,weights_path,save_dir,orientation):
+  
   """
   :param args:
   :return:
   """
+
+  if orientation == 'vline':
+    from lanenet_model import lanenet_postprocess_vline as lanenet_postprocess
+  else:
+    from lanenet_model import lanenet_postprocess_hline as lanenet_postprocess
+
   assert ops.exists(src), '{:s} not exist'.format(src)
-  assert ops.exists(save_dir), '{:s} not exist'.format(save_dir)
 
   log.info("Prediction are saved in : {}".format(save_dir))
   
@@ -353,17 +369,19 @@ def main(args):
     cmd = args.command
     lanenet_log_dir = '/aimldl-dat/logs/lanenet'
 
+    orientation = args.orientation
+
     if cmd == 'predict':
       src = args.src
       weights_path = args.weights_path
       save_dir = ops.join(lanenet_log_dir,cmd)
-      detect(src,weights_path,save_dir)
+      detect(src,weights_path,save_dir,orientation)
     else:
       cfg = yaml_load(args.cfg)
       weights_path = cfg.EVALUATE.WEIGHTS
       src = cfg.EVALUATE.DATASET
       save_dir = ops.join(lanenet_log_dir,cmd)
-      detect_batch(cfg,src,weights_path,save_dir)
+      detect_batch(cfg,src,weights_path,save_dir,orientation)
 
   except Exception as e:
     log.error("Exception occurred", exc_info=True)
