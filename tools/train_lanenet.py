@@ -35,9 +35,6 @@ from tools import evaluate_model_utils
 # # wandb.init(sync_tensorboard=True,project='testing')
 # wandb.init(project='13')
 
-from common import yaml_load
-CFG = yaml_load(args.cfg)
-log.info("CFG: {}".format(CFG))
 
 def init_args():
     """
@@ -521,6 +518,10 @@ if __name__ == '__main__':
 
     # init args
     args = init_args()
+    
+    from common import yaml_load
+    CFG = yaml_load(args.cfg)
+    log.info("CFG: {}".format(CFG))
 
     if CFG.TRAIN.GPU_NUM < 2:
         args.use_multi_gpu = False
