@@ -25,7 +25,7 @@ import tqdm
 from config import global_config
 from lanenet_model import lanenet
 from lanenet_model import lanenet_postprocess
-from common import getBasePath as getbasepath
+from lanenet_common import getBasePath as getbasepath
 
 CFG = global_config.cfg
 

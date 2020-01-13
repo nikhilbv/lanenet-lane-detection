@@ -26,8 +26,8 @@ import tqdm
 
 from config import global_config
 from lanenet_model import lanenet
-from common import getBasePath as getbasepath
-from common import yaml_load
+from lanenet_common import getBasePath as getbasepath
+from lanenet_common import yaml_load
 from evaluate import lane
 CFG = global_config.cfg
 
@@ -93,16 +93,21 @@ def isjson(src):
   if file == 'json':
     return file
 
-def convert_to_tusimple(json_file):
+def convert_to_tusimple(json_file,orientation):
   """
   :param json_file:
   """
   from Naked.toolshed.shell import execute_js
-  prog = '/aimldl-cod/apps/annon/lanenet_convertviatotusimple.js'
+  prog = '/codehub/apps/annon/lanenet_convertviatotusimple.js'
   cmd = '--pred'
+  orient = '--hLine'
   opt = '--short'
-  log.debug("{} {} {}".format(prog,cmd,json))
-  success = execute_js("{} {} {} {}".format(prog,cmd,opt,json_file))
+  if orientation == 'hline':
+    log.debug("{} {} {} {} {}".format(prog,orient,cmd,opt,json_file))
+    success = execute_js("{} {} {} {} {}".format(prog,orient,cmd,opt,json_file))
+  else:
+    log.debug("{} {} {} {}".format(prog,cmd,opt,json_file))
+    success = execute_js("{} {} {} {}".format(prog,cmd,opt,json_file))
 
 def evaluate_batch(pred,gt):
   """
@@ -351,7 +356,7 @@ def detect_batch(cfg,src,weights_path,save_dir,orientation):
       outfile.write('\n')
   
   if json_file_path:
-    convert_to_tusimple(json_file_path)
+    convert_to_tusimple(json_file_path,orientation)
 
   if isjson(src):
     pred_file = json_file_path.replace('.json','_tuSimple.json')

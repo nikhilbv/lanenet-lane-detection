@@ -9,7 +9,7 @@ __version__ = '1.2'
 # @Time    : 19-4-24 下午9:33
 # @Author  : MaybeShewill-CV
 # @Site    : https://github.com/MaybeShewill-CV/lanenet-lane-detection
-# @File    : train_lanenet.py
+# @File    : train.py
 # @IDE: PyCharm
 """
 Train lanenet script
@@ -36,20 +36,6 @@ from tools import evaluate_model_utils
 # wandb.init(project='13')
 
 
-def init_args():
-    """
-
-    :return:
-    """
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--cfg', help='The configuration file path')
-    parser.add_argument('--net_flag', type=str, default='vgg',
-                        help='The net flag which determins the net\'s architecture')
-
-    return parser.parse_args()
-
-
 def minmax_scale(input_arr):
     """
 
@@ -73,7 +59,7 @@ def load_pretrained_weights(variables, pretrained_weights_path, sess):
     :return:
     """
     log.info("pretrained_weights_path: {}".format(pretrained_weights_path))
-    assert ops.exists(pretrained_weights_path), '{:s} not exist'.format(pretrained_weights_path)
+    assert os.path.exists(pretrained_weights_path), '{:s} not exist'.format(pretrained_weights_path)
 
     pretrained_weights = np.load(pretrained_weights_path, encoding='latin1', allow_pickle=True).item()
 
@@ -93,7 +79,7 @@ def load_pretrained_weights(variables, pretrained_weights_path, sess):
 
 def record_training_intermediate_result(gt_images, gt_binary_labels, gt_instance_labels,
                                         binary_seg_images, pix_embeddings, flag='train',
-                                        save_dir='./tmp'):
+                                        save_dir='./tmp', archcfg=None):
     """
     record intermediate result during training process for monitoring
     :param gt_images:
@@ -109,26 +95,26 @@ def record_training_intermediate_result(gt_images, gt_binary_labels, gt_instance
 
     for index, gt_image in enumerate(gt_images):
         gt_image_name = '{:s}_{:d}_gt_image.png'.format(flag, index + 1)
-        gt_image_path = ops.join(save_dir, gt_image_name)
+        gt_image_path = os.path.join(save_dir, gt_image_name)
         gt_image = (gt_images[index] + 1.0) * 127.5
         cv2.imwrite(gt_image_path, np.array(gt_image, dtype=np.uint8))
 
         gt_binary_label_name = '{:s}_{:d}_gt_binary_label.png'.format(flag, index + 1)
-        gt_binary_label_path = ops.join(save_dir, gt_binary_label_name)
+        gt_binary_label_path = os.path.join(save_dir, gt_binary_label_name)
         cv2.imwrite(gt_binary_label_path, np.array(gt_binary_labels[index][:, :, 0] * 255, dtype=np.uint8))
 
         gt_instance_label_name = '{:s}_{:d}_gt_instance_label.png'.format(flag, index + 1)
-        gt_instance_label_path = ops.join(save_dir, gt_instance_label_name)
+        gt_instance_label_path = os.path.join(save_dir, gt_instance_label_name)
         cv2.imwrite(gt_instance_label_path, np.array(gt_instance_labels[index][:, :, 0], dtype=np.uint8))
 
         gt_binary_seg_name = '{:s}_{:d}_gt_binary_seg.png'.format(flag, index + 1)
-        gt_binary_seg_path = ops.join(save_dir, gt_binary_seg_name)
+        gt_binary_seg_path = os.path.join(save_dir, gt_binary_seg_name)
         cv2.imwrite(gt_binary_seg_path, np.array(binary_seg_images[index] * 255, dtype=np.uint8))
 
         embedding_image_name = '{:s}_{:d}_pix_embedding.png'.format(flag, index + 1)
-        embedding_image_path = ops.join(save_dir, embedding_image_name)
+        embedding_image_path = os.path.join(save_dir, embedding_image_name)
         embedding_image = pix_embeddings[index]
-        for i in range(CFG.TRAIN.EMBEDDING_FEATS_DIMS):
+        for i in range(archcfg.train.config.EMBEDDING_FEATS_DIMS):
             embedding_image[:, :, i] = minmax_scale(embedding_image[:, :, i])
         embedding_image = np.array(embedding_image, np.uint8)
         cv2.imwrite(embedding_image_path, embedding_image)
@@ -199,19 +185,11 @@ def compute_net_gradients(gt_images, gt_binary_labels, gt_instance_labels,
     return total_loss, grads
 
 
-def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
+def load_dataset(archcfg):
     """
-
-    :param dataset_dir:
-    :param net_flag: choose which base network to use
-    :param weights_path:
-    :return:
+    load_dataset
     """
-    now = datetime.datetime.now()
-    timestamp = "{:%d%m%y_%H%M%S}".format(now)
-
-    start_time = time.time()
-    log.info("Training started at : {}".format(start_time))
+    dataset_dir = archcfg.train.dataset_dir
 
     train_dataset = lanenet_data_feed_pipline.LaneNetDataFeeder(
         dataset_dir=dataset_dir, flags='train'
@@ -220,15 +198,61 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
         dataset_dir=dataset_dir, flags='val'
     )
 
+    return train_dataset, val_dataset
+
+
+def get_paths(archcfg, net_flag='vgg'):
+  # Set tf model save path
+  now = datetime.datetime.now()
+  timestamp = "{:%d%m%y_%H%M%S}".format(now)
+
+  logdir = archcfg.logdir
+  # output_dir = "/aimldl-dat/logs/lanenet/model"
+  output_dir = os.path.join(logdir, 'lanenet', 'model')
+  model_save_dir = os.path.join(output_dir, timestamp)
+  # model_save_dir = '/aimldl-dat/logs/lanenet/model/lanenet_{:s}'.format(net_flag)
+  train_start_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
+  model_name = 'tusimple_lanenet_{:s}_{:s}.ckpt'.format(net_flag, str(train_start_time))
+  # Set tf summary save path
+  # tboard_save_dir = '/aimldl-dat/logs/lanenet/tboard'
+  tboard_save_dir = os.path.join(logdir, 'lanenet', 'tboard')
+  # tboard_save_path = 'tboard/tusimple_lanenet_{:s}'.format(net_flag)
+
+  model_save_path = os.path.join(model_save_dir, model_name)
+  tboard_save_path = os.path.join(tboard_save_dir, time.strftime('%d-%m-%Y_%H-%M-%S', time.localtime(time.time())))  
+
+  return model_save_path, tboard_save_path
+
+
+def train(args, archcfg):
+    """
+    :param archcfg:
+    :param net_flag: choose which base network to use
+    :return:
+    """
+    net_flag = args.net_flag if 'net_flag' in args else 'vgg'
+
+    model_save_path, tboard_save_path = get_paths(archcfg, net_flag)
+    weights_path = archcfg.train.weights_path
+
+    ## create dirs if not exists
+    os.makedirs(model_save_path, exist_ok=True)
+    os.makedirs(tboard_save_path, exist_ok=True)
+
+    ## load the dataset    
+    train_dataset, val_dataset = load_dataset(archcfg)
+
+    start_time = time.time()
+    log.info("Training started at : {}".format(start_time))
     # with tf.device('/gpu:1'):
-    with tf.device('/gpu:{:d}'.format(CFG.TRAIN.GPU_NUM)):
+    with tf.device('/gpu:{:d}'.format(archcfg.train.config.GPU_NUM)):
         # set lanenet
         train_net = lanenet.LaneNet(net_flag=net_flag, phase='train', reuse=False)
         val_net = lanenet.LaneNet(net_flag=net_flag, phase='val', reuse=True)
 
         # set compute graph node for training
         train_images, train_binary_labels, train_instance_labels = train_dataset.inputs(
-            CFG.TRAIN.BATCH_SIZE, 1
+            archcfg.train.config.BATCH_SIZE, 1
         )
 
         train_compute_ret = train_net.compute_loss(
@@ -296,7 +320,7 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
 
         # set compute graph node for validation
         val_images, val_binary_labels, val_instance_labels = val_dataset.inputs(
-            CFG.TRAIN.VAL_BATCH_SIZE, 1
+            archcfg.train.config.VAL_BATCH_SIZE, 1
         )
 
         val_compute_ret = val_net.compute_loss(
@@ -365,42 +389,27 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
         # set optimizer
         global_step = tf.Variable(0, trainable=False)
         learning_rate = tf.train.polynomial_decay(
-            learning_rate=CFG.TRAIN.LEARNING_RATE,
+            learning_rate=archcfg.train.config.LEARNING_RATE,
             global_step=global_step,
-            decay_steps=CFG.TRAIN.EPOCHS,
+            decay_steps=archcfg.train.config.EPOCHS,
             power=0.9
         )
 
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
             optimizer = tf.train.MomentumOptimizer(
-                learning_rate=learning_rate, momentum=CFG.TRAIN.MOMENTUM).minimize(
+                learning_rate=learning_rate, momentum=archcfg.train.config.MOMENTUM).minimize(
                 loss=train_total_loss,
                 var_list=tf.trainable_variables(),
                 global_step=global_step
             )
 
-    # Set tf model save path
-    # model_save_dir = 'model/tusimple_lanenet_{:s}'.format(net_flag)
-    output_dir = "/aimldl-dat/logs/lanenet/model"
-    model_save_dir = ops.join(output_dir,timestamp)
-    # model_save_dir = '/aimldl-dat/logs/lanenet/model/lanenet_{:s}'.format(net_flag)
-    os.makedirs(model_save_dir, exist_ok=True)
-    train_start_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
-    model_name = 'tusimple_lanenet_{:s}_{:s}.ckpt'.format(net_flag, str(train_start_time))
-    model_save_path = ops.join(model_save_dir, model_name)
     saver = tf.train.Saver()
-
-    # Set tf summary save path
-    tboard_save_dir = '/aimldl-dat/logs/lanenet/tboard'
-    tboard_save_path = ops.join(tboard_save_dir,time.strftime('%d-%m-%Y_%H-%M-%S', time.localtime(time.time())))
-    # tboard_save_path = 'tboard/tusimple_lanenet_{:s}'.format(net_flag)
-    os.makedirs(tboard_save_path, exist_ok=True)
 
     # Set sess configuration
     sess_config = tf.ConfigProto(allow_soft_placement=True)
-    sess_config.gpu_options.per_process_gpu_memory_fraction = CFG.TRAIN.GPU_MEMORY_FRACTION
-    sess_config.gpu_options.allow_growth = CFG.TRAIN.TF_ALLOW_GROWTH
+    sess_config.gpu_options.per_process_gpu_memory_fraction = archcfg.train.config.GPU_MEMORY_FRACTION
+    sess_config.gpu_options.allow_growth = archcfg.train.config.TF_ALLOW_GROWTH
     sess_config.gpu_options.allocator_type = 'BFC'
 
     sess = tf.Session(config=sess_config)
@@ -409,7 +418,7 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
     summary_writer.add_graph(sess.graph)
 
     # Set the training parameters
-    train_epochs = CFG.TRAIN.EPOCHS
+    train_epochs = archcfg.train.config.EPOCHS
 
     with sess.as_default():
 
@@ -421,6 +430,7 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
             log.info('Restore model from last model checkpoint {:s}'.format(weights_path))
             saver.restore(sess=sess, save_path=weights_path)
 
+        ## TODO: push the pretrained vgg paths to yml config
         if net_flag == 'vgg' and weights_path is None:
             load_pretrained_weights(tf.trainable_variables(), './data/vgg16.npy', sess)
 
@@ -454,13 +464,16 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
 
             if epoch % 100 == 0:
                 record_training_intermediate_result(
-                    gt_images=train_gt_imgs, gt_binary_labels=train_binary_gt_labels,
-                    gt_instance_labels=train_instance_gt_labels, binary_seg_images=train_binary_seg_imgs,
-                    pix_embeddings=train_embeddings
+                    gt_images=train_gt_imgs,
+                    gt_binary_labels=train_binary_gt_labels,
+                    gt_instance_labels=train_instance_gt_labels,
+                    binary_seg_images=train_binary_seg_imgs,
+                    pix_embeddings=train_embeddings,
+                    archcfg=archcfg
                 )
             summary_writer.add_summary(summary=train_summary, global_step=epoch)
 
-            if epoch % CFG.TRAIN.DISPLAY_STEP == 0:
+            if epoch % archcfg.train.config.DISPLAY_STEP == 0:
                 log.info('Epoch: {:d} total_loss= {:6f} binary_seg_loss= {:6f} '
                          'instance_seg_loss= {:6f} accuracy= {:6f} fp= {:6f} fn= {:6f}'
                          ' lr= {:6f} mean_cost_time= {:5f}s '.
@@ -489,16 +502,20 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
 
             if epoch % 100 == 0:
                 record_training_intermediate_result(
-                    gt_images=val_gt_imgs, gt_binary_labels=val_binary_gt_labels,
-                    gt_instance_labels=val_instance_gt_labels, binary_seg_images=val_binary_seg_imgs,
-                    pix_embeddings=val_embeddings, flag='val'
+                    gt_images=val_gt_imgs,
+                    gt_binary_labels=val_binary_gt_labels,
+                    gt_instance_labels=val_instance_gt_labels,
+                    binary_seg_images=val_binary_seg_imgs,
+                    pix_embeddings=val_embeddings,
+                    flag='val',
+                    archcfg=archcfg
                 )
 
             cost_time = time.time() - t_start
             train_cost_time_mean.append(cost_time)
             summary_writer.add_summary(summary=val_summary, global_step=epoch)
 
-            if epoch % CFG.TRAIN.VAL_DISPLAY_STEP == 0:
+            if epoch % archcfg.train.config.VAL_DISPLAY_STEP == 0:
                 log.info('Epoch_Val: {:d} total_loss= {:6f} binary_seg_loss= {:6f} '
                          'instance_seg_loss= {:6f} accuracy= {:6f} fp= {:6f} fn= {:6f}'
                          ' mean_cost_time= {:5f}s '.
@@ -511,21 +528,43 @@ def train_lanenet(dataset_dir, weights_path=None, net_flag='vgg'):
 
         log.info("Total_training_time: {}".format(time.time() - start_time))
 
-
     return
+
+
+def load_archcfg(path):
+    from lanenet_common import yaml_load
+
+    log.info("path: {}".format(path))
+    archcfg = yaml_load(path)
+    log.info("archcfg: {}".format(archcfg))
+
+    return archcfg
+
+
+def init_args():
+    """
+
+    :return:
+    """
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--cfg', help='The configuration file path')
+    parser.add_argument('--net_flag', type=str, default='vgg',
+                        help='The net flag which determins the net\'s architecture')
+
+    return parser.parse_args()
+
 
 if __name__ == '__main__':
 
     # init args
     args = init_args()
-    
-    from common import yaml_load
-    CFG = yaml_load(args.cfg)
-    log.info("CFG: {}".format(CFG))
+    archcfg = load_archcfg(args.cfg)
 
-    if CFG.TRAIN.GPU_NUM < 2:
+    if archcfg.train.config.GPU_NUM < 2:
         args.use_multi_gpu = False
 
     # train lanenet
-    log.info("train_lanenet-------------------->")
-    train_lanenet(CFG.TRAIN.DATASET, CFG.TRAIN.WEIGHTS, net_flag=args.net_flag)
+    log.info("train-------------------->")
+
+    train(args, archcfg)
