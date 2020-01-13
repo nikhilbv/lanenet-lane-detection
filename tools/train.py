@@ -14,10 +14,8 @@ __version__ = '1.2'
 """
 Train lanenet script
 """
-import argparse
-import math
 import os
-import os.path as ops
+import math
 import time
 import datetime
 
@@ -31,9 +29,36 @@ from data_provider import lanenet_data_feed_pipline
 from lanenet_model import lanenet
 from tools import evaluate_model_utils
 
+import lanenet_common
+
 # import wandb
 # # wandb.init(sync_tensorboard=True,project='testing')
 # wandb.init(project='13')
+
+
+def get_sess_config(cmdcfg):
+    sess_config = tf.ConfigProto(allow_soft_placement=True)
+    sess_config.gpu_options.per_process_gpu_memory_fraction = cmdcfg.config.GPU_MEMORY_FRACTION
+    sess_config.gpu_options.allow_growth = cmdcfg.config.TF_ALLOW_GROWTH
+    sess_config.gpu_options.allocator_type = 'BFC'
+
+    return sess_config
+
+
+def load_dataset_lanenet(archcfg):
+    """
+    load_dataset_lanenet
+    """
+    dataset_dir = archcfg.train.dataset_dir
+
+    dataset_train = lanenet_data_feed_pipline.LaneNetDataFeeder(
+        dataset_dir=dataset_dir, flags='train'
+    )
+    dataset_val = lanenet_data_feed_pipline.LaneNetDataFeeder(
+        dataset_dir=dataset_dir, flags='val'
+    )
+
+    return dataset_train, dataset_val
 
 
 def minmax_scale(input_arr):
@@ -79,7 +104,7 @@ def load_pretrained_weights(variables, pretrained_weights_path, sess):
 
 def record_training_intermediate_result(gt_images, gt_binary_labels, gt_instance_labels,
                                         binary_seg_images, pix_embeddings, flag='train',
-                                        save_dir='./tmp', archcfg=None):
+                                        save_dir='./tmp', cmdcfg=None):
     """
     record intermediate result during training process for monitoring
     :param gt_images:
@@ -114,7 +139,7 @@ def record_training_intermediate_result(gt_images, gt_binary_labels, gt_instance
         embedding_image_name = '{:s}_{:d}_pix_embedding.png'.format(flag, index + 1)
         embedding_image_path = os.path.join(save_dir, embedding_image_name)
         embedding_image = pix_embeddings[index]
-        for i in range(archcfg.train.config.EMBEDDING_FEATS_DIMS):
+        for i in range(cmdcfg.config.EMBEDDING_FEATS_DIMS):
             embedding_image[:, :, i] = minmax_scale(embedding_image[:, :, i])
         embedding_image = np.array(embedding_image, np.uint8)
         cv2.imwrite(embedding_image_path, embedding_image)
@@ -185,74 +210,24 @@ def compute_net_gradients(gt_images, gt_binary_labels, gt_instance_labels,
     return total_loss, grads
 
 
-def load_dataset(archcfg):
-    """
-    load_dataset
-    """
-    dataset_dir = archcfg.train.dataset_dir
+def _train(dataset_train, dataset_val, cmdcfg):
+    weights_path = cmdcfg['weights_path']
+    net_flag = cmdcfg['net_flag'] if 'net_flag' in cmdcfg else 'vgg'
+    model_save_path, tboard_save_path = cmdcfg['model_save_path'], cmdcfg['tboard_save_path']
 
-    train_dataset = lanenet_data_feed_pipline.LaneNetDataFeeder(
-        dataset_dir=dataset_dir, flags='train'
-    )
-    val_dataset = lanenet_data_feed_pipline.LaneNetDataFeeder(
-        dataset_dir=dataset_dir, flags='val'
-    )
-
-    return train_dataset, val_dataset
-
-
-def get_paths(archcfg, net_flag='vgg'):
-  # Set tf model save path
-  now = datetime.datetime.now()
-  timestamp = "{:%d%m%y_%H%M%S}".format(now)
-
-  logdir = archcfg.logdir
-  # output_dir = "/aimldl-dat/logs/lanenet/model"
-  output_dir = os.path.join(logdir, 'lanenet', 'model')
-  model_save_dir = os.path.join(output_dir, timestamp)
-  # model_save_dir = '/aimldl-dat/logs/lanenet/model/lanenet_{:s}'.format(net_flag)
-  train_start_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
-  model_name = 'tusimple_lanenet_{:s}_{:s}.ckpt'.format(net_flag, str(train_start_time))
-  # Set tf summary save path
-  # tboard_save_dir = '/aimldl-dat/logs/lanenet/tboard'
-  tboard_save_dir = os.path.join(logdir, 'lanenet', 'tboard')
-  # tboard_save_path = 'tboard/tusimple_lanenet_{:s}'.format(net_flag)
-
-  model_save_path = os.path.join(model_save_dir, model_name)
-  tboard_save_path = os.path.join(tboard_save_dir, time.strftime('%d-%m-%Y_%H-%M-%S', time.localtime(time.time())))  
-
-  return model_save_path, tboard_save_path
-
-
-def train(args, archcfg):
-    """
-    :param archcfg:
-    :param net_flag: choose which base network to use
-    :return:
-    """
-    net_flag = args.net_flag if 'net_flag' in args else 'vgg'
-
-    model_save_path, tboard_save_path = get_paths(archcfg, net_flag)
-    weights_path = archcfg.train.weights_path
-
-    ## create dirs if not exists
-    os.makedirs(model_save_path, exist_ok=True)
-    os.makedirs(tboard_save_path, exist_ok=True)
-
-    ## load the dataset    
-    train_dataset, val_dataset = load_dataset(archcfg)
+    dnncfg = cmdcfg.config
 
     start_time = time.time()
     log.info("Training started at : {}".format(start_time))
     # with tf.device('/gpu:1'):
-    with tf.device('/gpu:{:d}'.format(archcfg.train.config.GPU_NUM)):
+    with tf.device('/gpu:{:d}'.format(dnncfg.GPU_NUM)):
         # set lanenet
         train_net = lanenet.LaneNet(net_flag=net_flag, phase='train', reuse=False)
         val_net = lanenet.LaneNet(net_flag=net_flag, phase='val', reuse=True)
 
         # set compute graph node for training
-        train_images, train_binary_labels, train_instance_labels = train_dataset.inputs(
-            archcfg.train.config.BATCH_SIZE, 1
+        train_images, train_binary_labels, train_instance_labels = dataset_train.inputs(
+            dnncfg.BATCH_SIZE, 1
         )
 
         train_compute_ret = train_net.compute_loss(
@@ -319,8 +294,8 @@ def train(args, archcfg):
         )
 
         # set compute graph node for validation
-        val_images, val_binary_labels, val_instance_labels = val_dataset.inputs(
-            archcfg.train.config.VAL_BATCH_SIZE, 1
+        val_images, val_binary_labels, val_instance_labels = dataset_val.inputs(
+            dnncfg.VAL_BATCH_SIZE, 1
         )
 
         val_compute_ret = val_net.compute_loss(
@@ -389,16 +364,16 @@ def train(args, archcfg):
         # set optimizer
         global_step = tf.Variable(0, trainable=False)
         learning_rate = tf.train.polynomial_decay(
-            learning_rate=archcfg.train.config.LEARNING_RATE,
+            learning_rate=dnncfg.LEARNING_RATE,
             global_step=global_step,
-            decay_steps=archcfg.train.config.EPOCHS,
+            decay_steps=dnncfg.EPOCHS,
             power=0.9
         )
 
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
             optimizer = tf.train.MomentumOptimizer(
-                learning_rate=learning_rate, momentum=archcfg.train.config.MOMENTUM).minimize(
+                learning_rate=learning_rate, momentum=dnncfg.MOMENTUM).minimize(
                 loss=train_total_loss,
                 var_list=tf.trainable_variables(),
                 global_step=global_step
@@ -407,18 +382,14 @@ def train(args, archcfg):
     saver = tf.train.Saver()
 
     # Set sess configuration
-    sess_config = tf.ConfigProto(allow_soft_placement=True)
-    sess_config.gpu_options.per_process_gpu_memory_fraction = archcfg.train.config.GPU_MEMORY_FRACTION
-    sess_config.gpu_options.allow_growth = archcfg.train.config.TF_ALLOW_GROWTH
-    sess_config.gpu_options.allocator_type = 'BFC'
-
+    sess_config = get_sess_config(cmdcfg)
     sess = tf.Session(config=sess_config)
 
     summary_writer = tf.summary.FileWriter(tboard_save_path)
     summary_writer.add_graph(sess.graph)
 
     # Set the training parameters
-    train_epochs = archcfg.train.config.EPOCHS
+    train_epochs = dnncfg.EPOCHS
 
     with sess.as_default():
 
@@ -469,11 +440,11 @@ def train(args, archcfg):
                     gt_instance_labels=train_instance_gt_labels,
                     binary_seg_images=train_binary_seg_imgs,
                     pix_embeddings=train_embeddings,
-                    archcfg=archcfg
+                    cmdcfg=cmdcfg
                 )
             summary_writer.add_summary(summary=train_summary, global_step=epoch)
 
-            if epoch % archcfg.train.config.DISPLAY_STEP == 0:
+            if epoch % dnncfg.DISPLAY_STEP == 0:
                 log.info('Epoch: {:d} total_loss= {:6f} binary_seg_loss= {:6f} '
                          'instance_seg_loss= {:6f} accuracy= {:6f} fp= {:6f} fn= {:6f}'
                          ' lr= {:6f} mean_cost_time= {:5f}s '.
@@ -508,14 +479,14 @@ def train(args, archcfg):
                     binary_seg_images=val_binary_seg_imgs,
                     pix_embeddings=val_embeddings,
                     flag='val',
-                    archcfg=archcfg
+                    cmdcfg=cmdcfg
                 )
 
             cost_time = time.time() - t_start
             train_cost_time_mean.append(cost_time)
             summary_writer.add_summary(summary=val_summary, global_step=epoch)
 
-            if epoch % archcfg.train.config.VAL_DISPLAY_STEP == 0:
+            if epoch % dnncfg.VAL_DISPLAY_STEP == 0:
                 log.info('Epoch_Val: {:d} total_loss= {:6f} binary_seg_loss= {:6f} '
                          'instance_seg_loss= {:6f} accuracy= {:6f} fp= {:6f} fn= {:6f}'
                          ' mean_cost_time= {:5f}s '.
@@ -528,24 +499,51 @@ def train(args, archcfg):
 
         log.info("Total_training_time: {}".format(time.time() - start_time))
 
+
+def train(args, archcfg, paths):
+    ## create dirs if not exists
+    lanenet_common.create_paths(paths)
+    ## load the dataset    
+    dataset_train, dataset_val = load_dataset_lanenet(archcfg)
+
+    cmdcfg = archcfg.train
+    _train(dataset_train, dataset_val, cmdcfg)
+
     return
 
 
-def load_archcfg(path):
-    from lanenet_common import yaml_load
+def tdd(args, archcfg, paths):    
+    from easydict import EasyDict as edict
 
-    log.info("path: {}".format(path))
-    archcfg = yaml_load(path)
-    log.info("archcfg: {}".format(archcfg))
+    # from config import global_config
+    # CFG = global_config.cfg
 
-    return archcfg
+    class InferenceConfig(edict):
+      """
+      Dynamic loading of the config using a dictionary object
+      ## Ref:
+      ## How to creating-class-instance-properties-from-a-dictionary?
+      ## https://stackoverflow.com/questions/1639174/creating-class-instance-properties-from-a-dictionary
+      #
+      ## How to invoke the super constructor?
+      ## https://stackoverflow.com/questions/2399307/how-to-invoke-the-super-constructor#2399332
+      ------------------------------------------------------------
+      """
+      def __init__(self, dictionary):
+        for k,v in dictionary.items():
+          setattr(self, k, v)
+        # super(InferenceConfig, self).__init__()
 
 
-def init_args():
-    """
+    cmdcfg = archcfg.train
+    dnncfg = InferenceConfig(cmdcfg.config)
 
-    :return:
-    """
+    print("dnncfg: {}".format(dnncfg))
+
+
+def parse_args():
+    import argparse
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--cfg', help='The configuration file path')
@@ -555,16 +553,30 @@ def init_args():
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+def main():
+    args = parse_args()
+    archcfg = lanenet_common.load_archcfg(args.cfg)
+    cmdcfg = archcfg.train
 
-    # init args
-    args = init_args()
-    archcfg = load_archcfg(args.cfg)
-
-    if archcfg.train.config.GPU_NUM < 2:
+    if cmdcfg.config.GPU_NUM < 2:
         args.use_multi_gpu = False
 
     # train lanenet
     log.info("train-------------------->")
 
-    train(args, archcfg)
+    net_flag = args.net_flag if 'net_flag' in args else 'vgg'
+    paths, _ = lanenet_common.get_paths_lanenet(archcfg, net_flag=net_flag)
+    cmdcfg = archcfg.train
+    cmdcfg['net_flag'] = net_flag
+    for k,v in paths.items():
+        cmdcfg[k] = v
+
+    ## training
+    train(args, archcfg, paths)
+
+    ## test driven development
+    # tdd(args, archcfg, paths)
+
+
+if __name__ == '__main__':
+    main()

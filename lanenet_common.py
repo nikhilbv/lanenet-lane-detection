@@ -104,7 +104,7 @@ def timestamp_from_datestring(dt):
   return ts
 
 
-def log(text, array=None):
+def _log(text, array=None):
     """Prints a text message. And, optionally, if a Numpy array is provided it
     prints it's shape, min, and max values.
 
@@ -390,3 +390,115 @@ def raise_error(error_type, msg):
   """TODO: custom error handler
   """
   log.info("raise_error: {}".format(error_type))
+
+
+## =====================================================
+## Lanenet Common Utility functions
+## =====================================================
+
+def load_archcfg(path):
+    log.info("path: {}".format(path))
+    archcfg = yaml_load(path)
+    log.info("archcfg: {}".format(archcfg))
+
+    return archcfg
+
+
+def create_paths(paths):
+  for p in paths.values():
+    os.makedirs(p, exist_ok=True)
+
+
+def get_paths_lanenet(cfg, cmd=None, net_flag='vgg'):
+  import time
+
+  _timestamp = timestamp()
+  logdir = cfg.logdir
+  predict_paths = None
+
+  if cmd:
+    save_dir = os.path.join(log_dir, 'lanenet', cmd)
+    log.info("Prediction are saved in : {}".format(save_dir))
+
+    output_image_dir = os.path.join(save_dir, _timestamp)
+    source_image_path = os.path.join(output_image_dir, "source_image")
+    binary_mask_path = os.path.join(output_image_dir, "binary_mask")
+    instance_mask_path = os.path.join(output_image_dir, "instance_mask")
+    pred_json_path = os.path.join(output_image_dir, "pred_json")
+    eval_json_path = os.path.join(output_image_dir, "eval_result")
+
+    predict_paths = {
+      'output_image_dir': output_image_dir,
+      'source_image_path': source_image_path,
+      'binary_mask_path': binary_mask_path,
+      'instance_mask_path': instance_mask_path,
+      'pred_json_path': pred_json_path,
+      'eval_json_path': eval_json_path
+    }
+
+  output_dir = os.path.join(logdir, 'lanenet', 'model')
+  model_save_dir = os.path.join(output_dir, _timestamp)
+  train_start_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
+  model_name = 'tusimple_lanenet_{:s}_{:s}.ckpt'.format(net_flag, str(train_start_time))
+  tboard_save_dir = os.path.join(logdir, 'lanenet', 'tboard')
+  model_save_path = os.path.join(model_save_dir, model_name)
+  tboard_save_path = os.path.join(tboard_save_dir, time.strftime('%d-%m-%Y_%H-%M-%S', time.localtime(time.time())))  
+
+  train_paths = {
+    'output_dir': output_dir,
+    'model_save_dir': model_save_dir,
+    'tboard_save_dir': tboard_save_dir,
+    'model_save_path': model_save_path,
+    'tboard_save_path': tboard_save_path
+  }
+
+  return train_paths, predict_paths
+
+
+def isjson(src):
+  file = src.split('/')[-1].split('.')[-1]
+  if file == 'json':
+    return file
+
+
+def get_image_list(path, ext='.jpg'):
+  import glob
+
+  src = path
+  image_list = []
+  if os.path.isdir(src):
+    image_list = glob.glob('{:s}/**/*{}'.format(src, ext), recursive=True)
+  elif isjson(src):
+    root = getBasePath(src)
+    with open(src,'r') as file:
+      json_lines = file.readlines()
+      line_index = 0
+      while line_index < len(json_lines):
+        json_line = json_lines[line_index]
+        sample = json.loads(json_line)
+        raw_file = os.path.join(root,sample['raw_file'])
+        image_list.append(raw_file)
+        line_index += 1
+  else:
+    image_list.append(src)
+
+  return image_list
+
+
+def convert_to_tusimple(json_file_path, prog_jspath='/codehub/apps/annon/lanenet_convertviatotusimple.js', cmd='pred', opt='short', orient='hLine'):
+  from Naked.toolshed.shell import execute_js
+
+  ## TODO: check from jspath file exists or throw error
+  # prog_jspath = '/codehub/apps/annon/lanenet_convertviatotusimple.js'
+  _cmd = '--'+cmd
+  _orient = '--'+orient
+  _opt = '--'+opt
+  log.debug("{} {} {} {} {}".format(prog_jspath, _orient, _cmd, _opt, json_file_path))
+
+  if orient == 'hLine':
+    success = execute_js("{} {} {} {} {}".format(prog_jspath, _orient, _cmd, _opt, json_file_path))
+  else:
+    success = execute_js("{} {} {} {}".format(prog_jspath, _cmd, _opt, json_file_path))
+
+  return success
+
