@@ -397,14 +397,11 @@ def raise_error(error_type, msg):
 ## =====================================================
 
 def load_archcfg(path):
-    log.info("path: {}".format(path))
-    archcfg = yaml_load(path)
-    log.info("archcfg: {}".format(archcfg))
-
-    return archcfg
+  archcfg = yaml_load(path)
+  return archcfg
 
 
-def create_paths(paths):
+def create_paths(paths):  
   for p in paths.values():
     os.makedirs(p, exist_ok=True)
 
@@ -417,7 +414,7 @@ def get_paths_lanenet(cfg, cmd=None, net_flag='vgg'):
   predict_paths = None
 
   if cmd:
-    save_dir = os.path.join(log_dir, 'lanenet', cmd)
+    save_dir = os.path.join(logdir, 'lanenet', cmd)
     log.info("Prediction are saved in : {}".format(save_dir))
 
     output_image_dir = os.path.join(save_dir, _timestamp)
@@ -438,18 +435,12 @@ def get_paths_lanenet(cfg, cmd=None, net_flag='vgg'):
 
   output_dir = os.path.join(logdir, 'lanenet', 'model')
   model_save_dir = os.path.join(output_dir, _timestamp)
-  train_start_time = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
-  model_name = 'tusimple_lanenet_{:s}_{:s}.ckpt'.format(net_flag, str(train_start_time))
   tboard_save_dir = os.path.join(logdir, 'lanenet', 'tboard')
-  model_save_path = os.path.join(model_save_dir, model_name)
-  tboard_save_path = os.path.join(tboard_save_dir, time.strftime('%d-%m-%Y_%H-%M-%S', time.localtime(time.time())))  
 
   train_paths = {
     'output_dir': output_dir,
     'model_save_dir': model_save_dir,
-    'tboard_save_dir': tboard_save_dir,
-    'model_save_path': model_save_path,
-    'tboard_save_path': tboard_save_path
+    'tboard_save_dir': tboard_save_dir
   }
 
   return train_paths, predict_paths

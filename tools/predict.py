@@ -1,6 +1,4 @@
-__author__ = 'nikhilbv'
-__version__ = '1.2'
-
+#!/usr/bin/env python3
 """
 # Predict or evaluate lanes 
 # --------------------------------------------------------
@@ -11,31 +9,35 @@ __version__ = '1.2'
 """
 import os
 import sys
-
 import glob
-
 import time
 import datetime
 import json
-
 import cv2
 import glog as log
 import numpy as np
+import logging
 import tensorflow as tf
 import tqdm
+
+from importlib import import_module
+
+from lanenet_model import lanenet
+from evaluate import lane
+import lanenet_common
+
+## To disable tensorflow debugging logs
+# https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+# log.setLevel("DEBUG")
 
 # from config import global_config
 # CFG = global_config.cfg
 
-import lanenet_model
-from lanenet_model import lanenet
-from evaluate import lane
-
-import lanenet_common
-
 this = sys.modules[__name__]
 
-# log.setLevel("DEBUG")
 
 def get_sess_config(archcfg):
   sess_config = tf.ConfigProto()
@@ -58,6 +60,11 @@ def _predict(archcfg, args, paths):
   src = args.src
   weights_path = args.weights_path
   orientation = args.orientation
+  
+  log.info("archcfg: {}".format(archcfg))
+
+  save_viz_and_json = archcfg.predict.save_viz_and_json if 'save_viz_and_json' in archcfg.predict else False
+  log.info("save_viz_and_json : {}".format(save_viz_and_json))
 
   assert os.path.exists(src), '{:s} not exist'.format(src)
   image_list = lanenet_common.get_image_list(src)
@@ -67,14 +74,14 @@ def _predict(archcfg, args, paths):
   ## create directory paths
   lanenet_common.create_paths(paths)
 
-  lanenet_postprocess_fn = getattr(lanenet_model, 'lanenet_postprocess_'+orientation)
+  lanenet_postprocess_mod = import_module("lanenet_model."+'lanenet_postprocess_'+orientation)
 
   input_tensor = tf.placeholder(dtype=tf.float32, shape=[1, 256, 512, 3], name='input_tensor')
 
   net = lanenet.LaneNet(phase='test', net_flag='vgg')
   binary_seg_ret, instance_seg_ret = net.inference(input_tensor=input_tensor, name='lanenet_model')
 
-  postprocessor = lanenet_postprocess_fn.LaneNetPostProcessor()
+  postprocessor = lanenet_postprocess_mod.LaneNetPostProcessor()
 
   saver = tf.train.Saver()
   # Set sess configurationtdd_mode
@@ -110,16 +117,17 @@ def _predict(archcfg, args, paths):
       if postprocess_result['pred_json']:
         pred_json.append(postprocess_result['pred_json'])
 
-      source_image_output_path = os.path.join(source_image_path, image_name)
-      cv2.imwrite(source_image_output_path, postprocess_result['source_image'])
+      if save_viz_and_json:  
+        source_image_output_path = os.path.join(paths['source_image_path'], image_name)
+        cv2.imwrite(source_image_output_path, postprocess_result['source_image'])
 
-      binary_mask_output_path = os.path.join(binary_mask_path, image_name)
-      cv2.imwrite(binary_mask_output_path, binary_seg_image[0] * 255)
+        binary_mask_output_path = os.path.join(paths['binary_mask_path'], image_name)
+        cv2.imwrite(binary_mask_output_path, binary_seg_image[0] * 255)
 
-      instance_mask_output_path = os.path.join(instance_mask_path, image_name)
-      cv2.imwrite(instance_mask_output_path, postprocess_result['mask_image'])
+        instance_mask_output_path = os.path.join(paths['instance_mask_path'], image_name)
+        cv2.imwrite(instance_mask_output_path, postprocess_result['mask_image'])
 
-  json_file_path = os.path.join(pred_json_path, 'pred.json')
+  json_file_path = os.path.join(paths['pred_json_path'], 'pred.json')
   with open(json_file_path,'w') as outfile:
     for items in pred_json:
       json.dump(items, outfile)
@@ -131,9 +139,13 @@ def _predict(archcfg, args, paths):
 def _evaluate(archcfg, args, paths):
   """
   """
-  src = archcfg.evaluate.dataset
-  weights_path = archcfg.evaluate.weights
+  src = archcfg.evaluate.dataset_dir
+  weights_path = archcfg.evaluate.weights_path
+  log.info("Evaluating on {} weights_path".format(weights_path))
+
   orientation = args.orientation
+  save_viz_and_json = archcfg.evaluate.save_viz_and_json if 'save_viz_and_json' in archcfg.evaluate else False
+  log.info("save_viz_and_json : {}".format(save_viz_and_json))
 
   assert os.path.exists(src), '{:s} not exist'.format(src)
   image_list = lanenet_common.get_image_list(src)
@@ -143,13 +155,13 @@ def _evaluate(archcfg, args, paths):
   ## create directory paths
   lanenet_common.create_paths(paths)
 
-  lanenet_postprocess_fn = getattr(lanenet_model, 'lanenet_postprocess_'+orientation)
+  lanenet_postprocess_mod = import_module("lanenet_model."+'lanenet_postprocess_'+orientation)
 
   input_tensor = tf.placeholder(dtype=tf.float32, shape=[1, 256, 512, 3], name='input_tensor')
   net = lanenet.LaneNet(phase='test', net_flag='vgg')
   binary_seg_ret, instance_seg_ret = net.inference(input_tensor=input_tensor, name='lanenet_model')
 
-  postprocessor = lanenet_postprocess_fn.LaneNetPostProcessor()
+  postprocessor = lanenet_postprocess_mod.LaneNetPostProcessor()
 
   saver = tf.train.Saver()
   # Set sess configurationtdd_mode
@@ -185,16 +197,17 @@ def _evaluate(archcfg, args, paths):
       if postprocess_result['pred_json']:
         pred_json.append(postprocess_result['pred_json'])
 
-      source_image_output_path = os.path.join(source_image_path,image_name)
-      cv2.imwrite(source_image_output_path, postprocess_result['source_image'])
+      if save_viz_and_json:  
+        source_image_output_path = os.path.join(paths['source_image_path'],image_name)
+        cv2.imwrite(source_image_output_path, postprocess_result['source_image'])
 
-      binary_mask_output_path = os.path.join(binary_mask_path,image_name)
-      cv2.imwrite(binary_mask_output_path, binary_seg_image[0] * 255)
+        binary_mask_output_path = os.path.join(paths['binary_mask_path'],image_name)
+        cv2.imwrite(binary_mask_output_path, binary_seg_image[0] * 255)
 
-      instance_mask_output_path = os.path.join(instance_mask_path,image_name)
-      cv2.imwrite(instance_mask_output_path, postprocess_result['mask_image'])
+        instance_mask_output_path = os.path.join(paths['instance_mask_path'],image_name)
+        cv2.imwrite(instance_mask_output_path, postprocess_result['mask_image'])
 
-  json_file_path = os.path.join(pred_json_path, 'pred.json')
+  json_file_path = os.path.join(paths['pred_json_path'], 'pred.json')
   with open(json_file_path,'w') as outfile:
     for items in pred_json:
       json.dump(items, outfile)
@@ -205,8 +218,8 @@ def _evaluate(archcfg, args, paths):
   if lanenet_common.isjson(src):
     pred_file = json_file_path.replace('.json','_tuSimple.json')
     val = evaluate_batch(pred_file, src)
-    log.info("----------------------------->\nEvaluation results:{}".format(val))
-    eval_file_name = os.path.join(eval_json_path, 'eval.json')
+    log.info("------------------------------------------------>\nEvaluation results:{}".format(val))
+    eval_file_name = os.path.join(paths['eval_json_path'], 'eval.json')
     with open(eval_file_name,'w') as outfile:
       json.dump(val, outfile)
 
@@ -284,7 +297,7 @@ def parse_args(commands):
 
 
 if __name__ == '__main__':
-  log.info("Executing....")
+  log.info("Executing....................")
   t1 = time.time()
 
   commands = ['predict', 'evaluate']

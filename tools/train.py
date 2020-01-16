@@ -1,9 +1,3 @@
-__author__ = 'nikhilbv'
-__version__ = '1.2'
-
-#Change log
-## Removed training on multiple gpu functionality, to add refer original parent repo
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # @Time    : 19-4-24 下午9:33
@@ -18,18 +12,20 @@ import os
 import math
 import time
 import datetime
-
 import cv2
 import glog as log
 import numpy as np
 import tensorflow as tf
 
-from config import global_config
 from data_provider import lanenet_data_feed_pipline
 from lanenet_model import lanenet
 from tools import evaluate_model_utils
-
 import lanenet_common
+
+## To disable tensorflow debugging logs
+# https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information
+logging.getLogger('tensorflow').setLevel(logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # import wandb
 # # wandb.init(sync_tensorboard=True,project='testing')
@@ -212,8 +208,14 @@ def compute_net_gradients(gt_images, gt_binary_labels, gt_instance_labels,
 
 def _train(dataset_train, dataset_val, cmdcfg):
     weights_path = cmdcfg['weights_path']
-    net_flag = cmdcfg['net_flag'] if 'net_flag' in cmdcfg else 'vgg'
-    model_save_path, tboard_save_path = cmdcfg['model_save_path'], cmdcfg['tboard_save_path']
+    net_flag = cmdcfg['net_flag '] if 'net_flag' in cmdcfg else 'vgg'
+    model_save_dir, tboard_save_dir = cmdcfg['model_save_dir'], cmdcfg['tboard_save_dir']
+    
+    train_start_time = time.strftime('%d-%m-%Y-%H-%M-%S', time.localtime(time.time()))
+    model_name = 'gaze_lanenet_{:s}_{:s}.ckpt'.format(net_flag, str(train_start_time))
+    model_save_path = os.path.join(model_save_dir, model_name)
+
+    tboard_save_path = os.path.join(tboard_save_dir, time.strftime('%d-%m-%Y_%H-%M-%S', time.localtime(time.time())))  
 
     dnncfg = cmdcfg.config
 
@@ -556,6 +558,7 @@ def parse_args():
 def main():
     args = parse_args()
     archcfg = lanenet_common.load_archcfg(args.cfg)
+    log.info("archcfg: {}".format(archcfg))
     cmdcfg = archcfg.train
 
     if cmdcfg.config.GPU_NUM < 2:
