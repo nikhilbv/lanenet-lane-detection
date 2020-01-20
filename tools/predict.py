@@ -108,10 +108,10 @@ def _predict(archcfg, args, paths):
       avg_time_cost.append(time.time() - t_start)
 
       postprocess_result = postprocessor.postprocess(
-        binary_seg_result=binary_seg_image[0],
-        instance_seg_result=instance_seg_image[0],
-        source_image=image_vis,
-        image_name=image_path
+        binary_seg_result = binary_seg_image[0],
+        instance_seg_result = instance_seg_image[0],
+        source_image = image_vis,
+        image_name = image_path
       )
 
       if postprocess_result['pred_json']:
@@ -174,6 +174,7 @@ def _evaluate(archcfg, args, paths):
     pred_json = []
 
     for index, image_path in tqdm.tqdm(enumerate(image_list), total=len(image_list)):
+      log.debug("image_path : {}".format(image_path))
       image_name = image_path.split('/')[-1]    
       image = cv2.imread(image_path, cv2.IMREAD_COLOR)
       image_vis = image
@@ -188,10 +189,10 @@ def _evaluate(archcfg, args, paths):
       avg_time_cost.append(time.time() - t_start)
 
       postprocess_result = postprocessor.postprocess(
-        binary_seg_result=binary_seg_image[0],
-        instance_seg_result=instance_seg_image[0],
-        source_image=image_vis,
-        image_name=image_path
+        binary_seg_result = binary_seg_image[0],
+        instance_seg_result = instance_seg_image[0],
+        source_image = image_vis,
+        image_name = image_path
       )
 
       if postprocess_result['pred_json']:

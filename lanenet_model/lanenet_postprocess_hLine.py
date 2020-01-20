@@ -325,7 +325,7 @@ class LaneNetPostProcessor(object):
             'pred_json' : {
                     'x_axis' : [],
                     'y_axis' : [],
-                    'image_name' : None,
+                    'image_name' : image_name,
                     'run_time' : 0
                 }            
         }
@@ -402,59 +402,64 @@ class LaneNetPostProcessor(object):
 
 
 
+                try:
+                    nonzero_y = np.array(tmp_ipm_mask.nonzero()[0])
+                    nonzero_x = np.array(tmp_ipm_mask.nonzero()[1])
 
-                nonzero_y = np.array(tmp_ipm_mask.nonzero()[0])
-                nonzero_x = np.array(tmp_ipm_mask.nonzero()[1])
+                    log.debug("nonzero_y : {}".format(nonzero_y))
+                    log.debug("max of nonzero_y : {}".format(np.max(nonzero_y)))
+                    log.debug("min of nonzero_y : {}".format(np.min(nonzero_y)))
 
-                log.debug("nonzero_y : {}".format(nonzero_y))
-                log.debug("max of nonzero_y : {}".format(np.max(nonzero_y)))
-                log.debug("min of nonzero_y : {}".format(np.min(nonzero_y)))
+                    log.debug("nonzero_x : {}".format(nonzero_x))
+                    log.debug("max of nonzero_x : {}".format(np.max(nonzero_x)))
+                    log.debug("min of nonzero_x : {}".format(np.min(nonzero_x)))
 
-                log.debug("nonzero_x : {}".format(nonzero_x))
-                log.debug("max of nonzero_x : {}".format(np.max(nonzero_x)))
-                log.debug("min of nonzero_x : {}".format(np.min(nonzero_x)))
+                # for index,val in enumerate(nonzero_x):
+                #   lane_color = self._color_map[lane_index].tolist()
+                #   cv2.circle(tmp_ipm_image, (nonzero_x[index],nonzero_y[index]), 5, lane_color, -1)
 
-                for index,val in enumerate(nonzero_x):
-                  lane_color = self._color_map[lane_index].tolist()
-                  cv2.circle(tmp_ipm_image, (nonzero_x[index],nonzero_y[index]), 5, lane_color, -1)
+                    bbox = []
+                    src_x = self._remap_to_ipm_x[np.min(nonzero_y),np.min(nonzero_x)]
+                    src_y = self._remap_to_ipm_y[np.min(nonzero_y),np.min(nonzero_x)]
+                    bbox.append([src_x, src_y])
 
-                bbox = []
-                src_x = self._remap_to_ipm_x[np.min(nonzero_y),np.min(nonzero_x)]
-                src_y = self._remap_to_ipm_y[np.min(nonzero_y),np.min(nonzero_x)]
-                bbox.append([src_x, src_y])
+                    src_x = self._remap_to_ipm_x[np.min(nonzero_y),np.max(nonzero_x)]
+                    src_y = self._remap_to_ipm_y[np.min(nonzero_y),np.max(nonzero_x)]
+                    bbox.append([src_x, src_y])
 
-                src_x = self._remap_to_ipm_x[np.min(nonzero_y),np.max(nonzero_x)]
-                src_y = self._remap_to_ipm_y[np.min(nonzero_y),np.max(nonzero_x)]
-                bbox.append([src_x, src_y])
+                    src_x = self._remap_to_ipm_x[np.max(nonzero_y),np.max(nonzero_x)]
+                    src_y = self._remap_to_ipm_y[np.max(nonzero_y),np.max(nonzero_x)]
+                    bbox.append([src_x, src_y])
 
-                src_x = self._remap_to_ipm_x[np.max(nonzero_y),np.max(nonzero_x)]
-                src_y = self._remap_to_ipm_y[np.max(nonzero_y),np.max(nonzero_x)]
-                bbox.append([src_x, src_y])
+                    src_x = self._remap_to_ipm_x[np.max(nonzero_y),np.min(nonzero_x)]
+                    src_y = self._remap_to_ipm_y[np.max(nonzero_y),np.min(nonzero_x)]
+                    bbox.append([src_x, src_y])
 
-                src_x = self._remap_to_ipm_x[np.max(nonzero_y),np.min(nonzero_x)]
-                src_y = self._remap_to_ipm_y[np.max(nonzero_y),np.min(nonzero_x)]
-                bbox.append([src_x, src_y])
+                    log.debug("bbox : {}".format(bbox))
 
-                log.debug("bbox : {}".format(bbox))
+                    min_x = min(bbox[0][0],bbox[3][0])
+                    log.debug("min_x : {}".format(min_x))
 
-                min_x = min(bbox[0][0],bbox[3][0])
-                log.debug("min_x : {}".format(min_x))
-
-                max_x = max(bbox[1][0],bbox[2][0])
-                log.debug("max_x : {}".format(max_x))
-
-                fit_param = np.polyfit(nonzero_x, nonzero_y,  2)
-                fit_params.append(fit_param)
-                log.debug("fit_params : {}".format(fit_params))
+                    max_x = max(bbox[1][0],bbox[2][0])
+                    log.debug("max_x : {}".format(max_x))
 
 
-                [ipm_image_height, ipm_image_width] = tmp_ipm_mask.shape
-                plot_x = np.linspace(10, ipm_image_width, ipm_image_width - 10)
-                log.debug("plot_x : {}".format(plot_x))
 
-                fit_y = fit_param[0] * plot_x ** 2 + fit_param[1] * plot_x + fit_param[2]
-                # fit_y = fit_param[0] * plot_x ** 3 + fit_param[1] * plot_x ** 2 + fit_param[2] * plot_x + fit_param[3]
-                log.debug("fit_y : {}".format(fit_y))
+                    fit_param = np.polyfit(nonzero_x, nonzero_y,  2)
+                    fit_params.append(fit_param)
+                    log.debug("fit_params : {}".format(fit_params))
+
+
+                    [ipm_image_height, ipm_image_width] = tmp_ipm_mask.shape
+                    plot_x = np.linspace(10, ipm_image_width, ipm_image_width - 10)
+                    log.debug("plot_x : {}".format(plot_x))
+
+                    fit_y = fit_param[0] * plot_x ** 2 + fit_param[1] * plot_x + fit_param[2]
+                    # fit_y = fit_param[0] * plot_x ** 3 + fit_param[1] * plot_x ** 2 + fit_param[2] * plot_x + fit_param[3]
+                    log.debug("fit_y : {}".format(fit_y))
+
+                except ValueError: 
+                    pass
 
                 lane_pts = []
                 for index in range(0, plot_x.shape[0], 5):
@@ -468,15 +473,15 @@ class LaneNetPostProcessor(object):
                         continue
 
                     src_y = self._remap_to_ipm_y[
-                        # int(plot_x[index]), int(np.clip(fit_y[index], 0, ipm_image_height - 1))]
                         int(np.clip(fit_y[index], 0, ipm_image_height - 1)),int(plot_x[index])]
                     src_y = src_y if src_y > 0 else 0
 
                     lane_pts.append([src_x, src_y])
                     log.debug("lane_pts : {}".format(lane_pts))
 
-                src_lane_pts.append(lane_pts)
-                log.debug("src_lane_pts : {}".format(src_lane_pts))
+                if lane_pts:
+                  src_lane_pts.append(lane_pts)
+                  log.debug("src_lane_pts : {}".format(src_lane_pts))
             
             # lane_img = np.zeros(shape=(source_image_height,source_image_width*3,3), dtype=np.uint8)
             # cv2.imwrite("tmp_ipm_image.png",tmp_ipm_image)
