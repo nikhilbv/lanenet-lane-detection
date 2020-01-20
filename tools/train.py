@@ -22,10 +22,10 @@ from lanenet_model import lanenet
 from tools import evaluate_model_utils
 import lanenet_common
 
-## To disable tensorflow debugging logs
-# https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information
-logging.getLogger('tensorflow').setLevel(logging.ERROR)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+# ## To disable tensorflow debugging logs
+# # https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information
+# logging.getLogger('tensorflow').setLevel(logging.ERROR)
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # import wandb
 # # wandb.init(sync_tensorboard=True,project='testing')
@@ -208,7 +208,7 @@ def compute_net_gradients(gt_images, gt_binary_labels, gt_instance_labels,
 
 def _train(dataset_train, dataset_val, cmdcfg):
     weights_path = cmdcfg['weights_path']
-    net_flag = cmdcfg['net_flag '] if 'net_flag' in cmdcfg else 'vgg'
+    net_flag = cmdcfg['net_flag'] if 'net_flag' in cmdcfg else 'vgg'
     model_save_dir, tboard_save_dir = cmdcfg['model_save_dir'], cmdcfg['tboard_save_dir']
     
     train_start_time = time.strftime('%d-%m-%Y-%H-%M-%S', time.localtime(time.time()))
@@ -240,6 +240,7 @@ def _train(dataset_train, dataset_val, cmdcfg):
         pre_train_c = 0
         pre_train_binary_loss = 0
         pre_train_instance_loss = 0
+        nan_count = 0
         train_total_loss = train_compute_ret['total_loss']
         train_binary_seg_loss = train_compute_ret['binary_seg_loss']
         train_disc_loss = train_compute_ret['discriminative_loss']
@@ -423,9 +424,11 @@ def _train(dataset_train, dataset_val, cmdcfg):
                           train_disc_loss, train_pix_embedding, train_prediction,
                           train_images, train_binary_labels, train_instance_labels])
             if math.isnan(train_c) or math.isnan(train_binary_loss) or math.isnan(train_instance_loss):
+                nan_count = nan_count + 1
                 train_c = pre_train_c
                 train_binary_loss = pre_train_binary_loss
                 train_instance_loss = pre_train_instance_loss
+                log.error('nan_count is: {:.5f}'.format(nan_count))
                 log.error('cost is: {:.5f}'.format(train_c))
                 log.error('binary cost is: {:.5f}'.format(train_binary_loss))
                 log.error('instance cost is: {:.5f}'.format(train_instance_loss))
