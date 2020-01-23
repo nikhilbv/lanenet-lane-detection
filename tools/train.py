@@ -21,6 +21,7 @@ from data_provider import lanenet_data_feed_pipline
 from lanenet_model import lanenet
 from tools import evaluate_model_utils
 import lanenet_common
+import logging
 
 # ## To disable tensorflow debugging logs
 # # https://stackoverflow.com/questions/35911252/disable-tensorflow-debugging-information
@@ -139,6 +140,53 @@ def record_training_intermediate_result(gt_images, gt_binary_labels, gt_instance
             embedding_image[:, :, i] = minmax_scale(embedding_image[:, :, i])
         embedding_image = np.array(embedding_image, np.uint8)
         cv2.imwrite(embedding_image_path, embedding_image)
+
+    return
+
+def record_nan_images(gt_images, gt_binary_labels, gt_instance_labels,
+                                        binary_seg_images, pix_embeddings, flag='train',
+                                        save_dir='/aimldl-dat/samples/nan_images', cmdcfg=None):
+    """
+    record gt images having nan during training process for monitoring
+    :param gt_images:
+    :param gt_binary_labels:
+    :param gt_instance_labels:
+    :param binary_seg_images:
+    :param pix_embeddings:
+    :param flag:
+    :param save_dir:
+    :return:
+    """
+
+    _timestamp = lanenet_common.timestamp()
+    os.makedirs(save_dir, exist_ok=True)
+
+    for index, gt_image in enumerate(gt_images):
+        # gt_image_name = '{:s}_{:d}_gt_image'+_timestamp+'.png'.format(flag, index + 1)
+        gt_image_name = 'Nan_image-'+_timestamp+'.png'
+        gt_image_path = os.path.join(save_dir, gt_image_name)
+        gt_image = (gt_images[index] + 1.0) * 127.5
+        cv2.imwrite(gt_image_path, np.array(gt_image, dtype=np.uint8))
+
+        # gt_binary_label_name = '{:s}_{:d}_gt_binary_label'+_timestamp+'.png'.format(flag, index + 1)
+        # gt_binary_label_path = os.path.join(save_dir, gt_binary_label_name)
+        # cv2.imwrite(gt_binary_label_path, np.array(gt_binary_labels[index][:, :, 0] * 255, dtype=np.uint8))
+
+        # gt_instance_label_name = '{:s}_{:d}_gt_instance_label'+_timestamp+'.png'.format(flag, index + 1)
+        # gt_instance_label_path = os.path.join(save_dir, gt_instance_label_name)
+        # cv2.imwrite(gt_instance_label_path, np.array(gt_instance_labels[index][:, :, 0], dtype=np.uint8))
+
+        # gt_binary_seg_name = '{:s}_{:d}_gt_binary_seg'+_timestamp+'.png'.format(flag, index + 1)
+        # gt_binary_seg_path = os.path.join(save_dir, gt_binary_seg_name)
+        # cv2.imwrite(gt_binary_seg_path, np.array(binary_seg_images[index] * 255, dtype=np.uint8))
+
+        # embedding_image_name = '{:s}_{:d}_pix_embedding.png'.format(flag, index + 1)
+        # embedding_image_path = os.path.join(save_dir, embedding_image_name)
+        # embedding_image = pix_embeddings[index]
+        # for i in range(cmdcfg.config.EMBEDDING_FEATS_DIMS):
+        #     embedding_image[:, :, i] = minmax_scale(embedding_image[:, :, i])
+        # embedding_image = np.array(embedding_image, np.uint8)
+        # cv2.imwrite(embedding_image_path, embedding_image)
 
     return
 
@@ -425,10 +473,18 @@ def _train(dataset_train, dataset_val, cmdcfg):
                           train_images, train_binary_labels, train_instance_labels])
             if math.isnan(train_c) or math.isnan(train_binary_loss) or math.isnan(train_instance_loss):
                 nan_count = nan_count + 1
+                # record_nan_images(
+                #     gt_images=train_gt_imgs,
+                #     gt_binary_labels=train_binary_gt_labels,
+                #     gt_instance_labels=train_instance_gt_labels,
+                #     binary_seg_images=train_binary_seg_imgs,
+                #     pix_embeddings=train_embeddings,
+                #     cmdcfg=cmdcfg
+                # )
                 train_c = pre_train_c
                 train_binary_loss = pre_train_binary_loss
                 train_instance_loss = pre_train_instance_loss
-                log.error('nan_count is: {:.5f}'.format(nan_count))
+                log.error('nan_count is: {}'.format(nan_count))
                 log.error('cost is: {:.5f}'.format(train_c))
                 log.error('binary cost is: {:.5f}'.format(train_binary_loss))
                 log.error('instance cost is: {:.5f}'.format(train_instance_loss))

@@ -460,29 +460,30 @@ class LaneNetPostProcessor(object):
 
                 except ValueError: 
                     pass
+                else:
 
-                lane_pts = []
-                for index in range(0, plot_x.shape[0], 5):
-                    src_x = self._remap_to_ipm_x[
-                         int(np.clip(fit_y[index], 0, ipm_image_height - 1)),int(plot_x[index])]
-                    if src_x <= 0:
-                        continue
-                    if src_x < min_x:
-                        continue
-                    if src_x > max_x:
-                        continue
+                    lane_pts = []
+                    for index in range(0, plot_x.shape[0], 5):
+                        src_x = self._remap_to_ipm_x[
+                             int(np.clip(fit_y[index], 0, ipm_image_height - 1)),int(plot_x[index])]
+                        if src_x <= 0:
+                            continue
+                        if src_x < min_x:
+                            continue
+                        if src_x > max_x:
+                            continue
 
-                    src_y = self._remap_to_ipm_y[
-                        int(np.clip(fit_y[index], 0, ipm_image_height - 1)),int(plot_x[index])]
-                    src_y = src_y if src_y > 0 else 0
+                        src_y = self._remap_to_ipm_y[
+                            int(np.clip(fit_y[index], 0, ipm_image_height - 1)),int(plot_x[index])]
+                        src_y = src_y if src_y > 0 else 0
 
-                    lane_pts.append([src_x, src_y])
-                    log.debug("lane_pts : {}".format(lane_pts))
+                        lane_pts.append([src_x, src_y])
+                        log.debug("lane_pts : {}".format(lane_pts))
 
-                if lane_pts:
-                  src_lane_pts.append(lane_pts)
-                  log.debug("src_lane_pts : {}".format(src_lane_pts))
-            
+                    if lane_pts:
+                      src_lane_pts.append(lane_pts)
+                      log.debug("src_lane_pts : {}".format(src_lane_pts))
+                
             # lane_img = np.zeros(shape=(source_image_height,source_image_width*3,3), dtype=np.uint8)
             # cv2.imwrite("tmp_ipm_image.png",tmp_ipm_image)
 
