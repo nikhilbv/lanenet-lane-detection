@@ -400,8 +400,6 @@ class LaneNetPostProcessor(object):
                 
                 # cv2.imwrite("tmp_ipm_mask.png",tmp_ipm_mask)
 
-
-
                 try:
                     nonzero_y = np.array(tmp_ipm_mask.nonzero()[0])
                     nonzero_x = np.array(tmp_ipm_mask.nonzero()[1])
@@ -414,9 +412,9 @@ class LaneNetPostProcessor(object):
                     log.debug("max of nonzero_x : {}".format(np.max(nonzero_x)))
                     log.debug("min of nonzero_x : {}".format(np.min(nonzero_x)))
 
-                # for index,val in enumerate(nonzero_x):
-                #   lane_color = self._color_map[lane_index].tolist()
-                #   cv2.circle(tmp_ipm_image, (nonzero_x[index],nonzero_y[index]), 5, lane_color, -1)
+                    # for index,val in enumerate(nonzero_x):
+                    #   lane_color = self._color_map[lane_index].tolist()
+                    #   cv2.circle(tmp_ipm_image, (nonzero_x[index],nonzero_y[index]), 5, lane_color, -1)
 
                     bbox = []
                     src_x = self._remap_to_ipm_x[np.min(nonzero_y),np.min(nonzero_x)]
