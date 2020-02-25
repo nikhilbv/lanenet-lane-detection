@@ -413,7 +413,7 @@ def get_paths_lanenet(cfg, cmd=None, net_flag='vgg'):
   logdir = cfg.logdir
   predict_paths = None
 
-  if cmd:
+  if cmd: 
     save_dir = os.path.join(logdir, 'lanenet', cmd)
     log.info("Prediction are saved in : {}".format(save_dir))
 
@@ -479,8 +479,7 @@ def get_image_list(path, ext='.jpg'):
 def convert_to_tusimple(json_file_path, prog_jspath='/codehub/apps/annon/lanenet_convertviatotusimple.js', cmd='pred', opt='short', orient='hLine'):
   from Naked.toolshed.shell import execute_js
 
-  ## TODO: check from jspath file exists or throw error
-  # prog_jspath = '/codehub/apps/annon/lanenet_convertviatotusimple.js'
+  assert os.path.exists(prog_jspath), '{:s} not exist'.format(prog_jspath)
   _cmd = '--'+cmd
   _orient = '--'+orient
   _opt = '--'+opt
@@ -492,4 +491,3 @@ def convert_to_tusimple(json_file_path, prog_jspath='/codehub/apps/annon/lanenet
     success = execute_js("{} {} {} {}".format(prog_jspath, _cmd, _opt, json_file_path))
 
   return success
-
