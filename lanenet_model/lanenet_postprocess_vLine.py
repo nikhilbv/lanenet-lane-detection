@@ -8,12 +8,12 @@
 """
 LaneNet model post process
 """
-import os.path as ops
+import os
 import math
-
 import cv2
 import glog as log
 import numpy as np
+import datetime
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import StandardScaler
 from config import global_config
@@ -268,7 +268,7 @@ class LaneNetPostProcessor(object):
 
         :param ipm_remap_file_path: ipm generate file path
         """
-        assert ops.exists(ipm_remap_file_path), '{:s} not exist'.format(ipm_remap_file_path)
+        assert os.path.exists(ipm_remap_file_path), '{:s} not exist'.format(ipm_remap_file_path)
 
         self._cluster = _LaneNetCluster()
         self._ipm_remap_file_path = ipm_remap_file_path
@@ -325,20 +325,24 @@ class LaneNetPostProcessor(object):
             'pred_json' : {
                     'x_axis' : [],
                     'y_axis' : [],
-                    'image_name' : None,
+                    'image_name' : image_name,
                     'run_time' : 0
                 }            
         }
 
         x = 0
         y = 0
+
+        # timestamp = ("{:%d%m%y_%H%M%S}").format(datetime.datetime.now())
+        # debug_image_dir = '/aimldl-dat/logs/lanenet/debug'
+        # debug_image_path = os.path.join(debug_image_dir,timestamp)
+        # os.makedirs(debug_image_path)
                 
         # convert binary_seg_result
         binary_seg_result = np.array(binary_seg_result * 255, dtype=np.uint8)
 
         # apply image morphology operation to fill in the hold and reduce the small area
         morphological_ret = _morphological_process(binary_seg_result, kernel_size=5)
-
 
         connect_components_analysis_ret = _connect_components_analysis(image=morphological_ret)
 
@@ -355,7 +359,10 @@ class LaneNetPostProcessor(object):
             binary_seg_result=morphological_ret,
             instance_seg_result=instance_seg_result
         )
-
+        
+        # mask_image_path = os.path.join(debug_image_path,"mask_image.png")
+        # cv2.imwrite(mask_image_path,mask_image)
+        
         source_image_height = source_image.shape[0]
         source_image_width = source_image.shape[1]
 
@@ -365,7 +372,14 @@ class LaneNetPostProcessor(object):
         else:
             # lane line fit
             fit_params = []
-            src_lane_pts = []  
+            src_lane_pts = []
+            tmp_ipm_image = cv2.remap(
+                source_image,
+                self._remap_to_ipm_x,
+                self._remap_to_ipm_y,
+                interpolation=cv2.INTER_NEAREST
+            )
+ 
             # lane pts every single lane
             for lane_index, coords in enumerate(lane_coords):
                 if data_source == 'tusimple':
@@ -380,17 +394,19 @@ class LaneNetPostProcessor(object):
                     tmp_mask[tuple((np.int_(coords[:, 1] * 1350 / 256), np.int_(coords[:, 0] * 2448 / 512)))] = 255
                 else:
                     raise ValueError('Wrong data source now only support tusimple and beec_ccd')
-
-                # cv2.imwrite("tmp_mask.png",tmp_mask)
-
+                
+                # tmp_mask_path = os.path.join(debug_image_path,"tmp_mask.png")
+                # cv2.imwrite(tmp_mask_path,tmp_mask)
+                
                 tmp_ipm_mask = cv2.remap(
                     tmp_mask,
                     self._remap_to_ipm_x,
                     self._remap_to_ipm_y,
                     interpolation=cv2.INTER_NEAREST
                 )
-
-                # cv2.imwrite("tmp_ipm_mask.png",tmp_ipm_mask)
+                
+                # tmp_ipm_mask_path = os.path.join(debug_image_path,"tmp_ipm_mask.png")
+                # cv2.imwrite(tmp_ipm_mask_path,tmp_ipm_mask)
 
                 nonzero_y = np.array(tmp_ipm_mask.nonzero()[0])
                 nonzero_x = np.array(tmp_ipm_mask.nonzero()[1])
@@ -404,8 +420,8 @@ class LaneNetPostProcessor(object):
                 log.debug("min of nonzero_x : {}".format(np.min(nonzero_x)))
 
                 # for index,val in enumerate(nonzero_x):
-                #   lane_color = self._color_map[lane_index].tolist()
-                #   cv2.circle(tmp_ipm_image, (nonzero_x[index],nonzero_y[index]), 5, lane_color, -1)
+                #     lane_color = self._color_map[lane_index].tolist()
+                #     cv2.circle(tmp_ipm_image, (nonzero_x[index],nonzero_y[index]), 5, lane_color, -1)
 
                 bbox = []
                 src_x = self._remap_to_ipm_x[np.min(nonzero_y),np.min(nonzero_x)]
@@ -432,7 +448,6 @@ class LaneNetPostProcessor(object):
                 max_y = max(bbox[1][1],bbox[2][1])
                 log.debug("max_y : {}".format(max_y))
 
-
                 fit_param = np.polyfit(nonzero_y, nonzero_x, 2)
                 fit_params.append(fit_param)
                 log.debug("fit_params : {}".format(fit_params))
@@ -440,6 +455,7 @@ class LaneNetPostProcessor(object):
                 [ipm_image_height, ipm_image_width] = tmp_ipm_mask.shape
                 plot_y = np.linspace(10, ipm_image_height, ipm_image_height - 10)
                 log.debug("plot_y : {}".format(plot_y))
+                
                 fit_x = fit_param[0] * plot_y ** 2 + fit_param[1] * plot_y + fit_param[2]
                 # fit_x = fit_param[0] * plot_y ** 3 + fit_param[1] * plot_y ** 2 + fit_param[2] * plot_y + fit_param[3]
                 log.debug("fit_x : {}".format(fit_x))
@@ -456,6 +472,7 @@ class LaneNetPostProcessor(object):
                         continue
                     # if src_y > max_y:
                     #     continue
+
                     src_y = src_y if src_y > 0 else 0
 
                     lane_pts.append([src_x, src_y])
@@ -464,21 +481,23 @@ class LaneNetPostProcessor(object):
                 src_lane_pts.append(lane_pts)
                 log.debug("src_lane_pts : {}".format(src_lane_pts))
 
-            # lane_img = np.zeros(shape=(source_image_height,source_image_width*3,3), dtype=np.uint8)
-            # cv2.imwrite("tmp_ipm_image.png",tmp_ipm_image)
+            lane_img = np.zeros(shape=(source_image_height,source_image_width*3,3), dtype=np.uint8)
+            tmp_ipm_image_path = os.path.join(debug_image_path,"tmp_ipm_image.png")
+            cv2.imwrite(tmp_ipm_image_path,tmp_ipm_image)
 
-            # for index,lane_pt in enumerate(src_lane_pts):
-            #   for i in lane_pt:
-            #     log.debug("i[0] = {}, i[1] = {}".format(int(i[0]),int(i[1])))
-            #     lane_color = self._color_map[index].tolist()
-            #     cv2.circle(lane_img, (int(i[0]),int(i[1])), 15, lane_color, -1)
-            # cv2.imwrite("lane_img.png",lane_img)    
+            for index,lane_pt in enumerate(src_lane_pts):
+              for i in lane_pt:
+                  log.debug("i[0] = {}, i[1] = {}".format(int(i[0]),int(i[1])))
+                  lane_color = self._color_map[index].tolist()
+                  cv2.circle(lane_img, (int(i[0]),int(i[1])), 15, lane_color, -1)
+
+            # lane_img_path = os.path.join(debug_image_path,"lane_img.png")
+            # cv2.imwrite(lane_img_path,lane_img)
 
             all_lane_x = []        
             all_lane_y = []        
 
             # tusimple test data sample point along y axis every 10 pixels
-            source_image_width = source_image.shape[1]
             for index, single_lane_pts in enumerate(src_lane_pts):
 
                 single_lane_pt_x = np.array(single_lane_pts, dtype=np.float32)[:, 0]
@@ -495,7 +514,6 @@ class LaneNetPostProcessor(object):
                 step = int(math.floor((end_plot_y - start_plot_y) / 10))                    
                 single_lane_x = []
                 single_lane_y = []
-                # iii = 0
                 for plot_y in np.linspace(start_plot_y, end_plot_y, step):
                     log.debug("plot_y : {}".format(plot_y))
                     diff = single_lane_pt_y - plot_y
@@ -561,3 +579,4 @@ class LaneNetPostProcessor(object):
 
         log.debug("ret : {}".format(ret))
         return ret
+        
